@@ -1,0 +1,17 @@
+services:
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: animal-crossing-player-mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./docker/mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./docker/mqtt/passwords:/mosquitto/config/passwords
+      - mqtt-data:/mosquitto/data
+      - mqtt-log:/mosquitto/log
+
+volumes:
+  mqtt-data:
+  mqtt-log:
