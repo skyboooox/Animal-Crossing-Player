@@ -1,0 +1,185 @@
+{
+  "app": {
+    "loadingAria": "正在加载应用"
+  },
+  "common": {
+    "appName": "动物森友会播放器",
+    "settings": "设置",
+    "home": "首页",
+    "back": "返回",
+    "skip": "跳过",
+    "next": "下一步",
+    "start": "开始",
+    "clear": "清除",
+    "preview": "预览",
+    "upload": "上传",
+    "refresh": "刷新",
+    "cancel": "取消",
+    "continue": "继续",
+    "townTuneNotes": "岛歌音符"
+  },
+  "home": {
+    "aria": "首页",
+    "openSettings": "打开设置",
+    "high": "高",
+    "low": "低"
+  },
+  "weather": {
+    "values": {
+      "Sunny": "晴天",
+      "Rainy": "雨天",
+      "Snowy": "雪天"
+    },
+    "locationLabels": {
+      "Fallback": "备用天气",
+      "Manual": "手动"
+    }
+  },
+  "onboarding": {
+    "title": "岛屿设置",
+    "pageActionsAria": "首次设置页面操作",
+    "language": {
+      "title": "语言"
+    },
+    "bgm": {
+      "title": "背景音乐版本",
+      "choicesAria": "背景音乐版本选项"
+    },
+    "townTune": {
+      "title": "岛歌",
+      "url": "NookNet 链接",
+      "noTune": "还没有设置岛歌。",
+      "skip": "跳过岛歌"
+    },
+    "audio": {
+      "title": "音频加载",
+      "progress": "音频加载进度",
+      "waiting": "等待中",
+      "starting": "开始加载",
+      "ready": "已就绪"
+    }
+  },
+  "permission": {
+    "title": "音频授权",
+    "later": "稍后",
+    "enable": "启用音频",
+    "body": "点击启用音频以允许浏览器播放。"
+  },
+  "startupAudio": {
+    "title": "启动岛屿电台",
+    "loadingTitle": "音频加载"
+  },
+  "settings": {
+    "modalAria": "设置弹窗",
+    "launcherAria": "设置启动台",
+    "panelAriaSuffix": "设置",
+    "categories": {
+      "Audio": {
+        "label": "音频",
+        "description": "播放、岛歌、音频缓存"
+      },
+      "Island": {
+        "label": "岛屿",
+        "description": "天气、背景、日期和时间"
+      },
+      "Remote": {
+        "label": "远控",
+        "description": "MQTT 连接和远控日志"
+      },
+      "App": {
+        "label": "应用",
+        "description": "语言、显示、维护"
+      }
+    },
+    "sections": {
+      "Playback": "播放",
+      "Town Tune": "岛歌",
+      "Audio Cache": "音频缓存",
+      "Weather & Location": "天气和位置",
+      "Background": "背景",
+      "Date & Time": "日期和时间",
+      "MQTT Connection": "MQTT 连接",
+      "Remote Log": "远控日志",
+      "Language": "语言",
+      "Display": "显示",
+      "Maintenance & Debug": "维护和调试"
+    },
+    "audio": {
+      "bgmVersion": "背景音乐版本",
+      "bgmVolume": "背景音乐音量",
+      "townTuneVolume": "岛歌音量",
+      "hourlyFlow": "整点流程",
+      "preloadNextHour": "预加载下一小时",
+      "fadeMs": "淡入淡出毫秒",
+      "nookNetUrl": "NookNet 链接",
+      "noTownTune": "还没有设置岛歌。",
+      "cacheAudio": "缓存音频",
+      "cacheCurrentSet": "缓存当前音频组",
+      "clearAudioCache": "清除音频缓存",
+      "cacheHint": "缓存只是增强能力。播放会在缓存不可用时回退到网络加载。"
+    },
+    "island": {
+      "kind": "类型",
+      "solid": "纯色",
+      "preset": "预设",
+      "uploaded": "已上传",
+      "solidColor": "纯色颜色",
+      "presetBackground": "预设背景 {{id}}",
+      "clearUploadedBackground": "清除上传背景",
+      "readabilityOverlay": "可读性遮罩",
+      "hourCycle": "小时制",
+      "lunarDate": "农历",
+      "mode": "模式",
+      "autoLocation": "自动定位",
+      "manual": "手动",
+      "manualWeather": "手动天气",
+      "manualLocationLabel": "手动位置名称",
+      "refreshWeather": "刷新天气",
+      "current": "当前"
+    },
+    "remote": {
+      "noMessages": "还没有远控消息。",
+      "enableRemoteControl": "启用远程控制",
+      "webSocketUrl": "WebSocket 地址",
+      "clientId": "客户端 ID",
+      "username": "用户名",
+      "password": "密码",
+      "saveCredentials": "保存用户名和密码",
+      "saveCredentialsConfirm": "用户名和密码会以明文保存在浏览器本地存储中。",
+      "baseTopic": "基础 Topic",
+      "retainState": "保留状态消息",
+      "testConnection": "测试连接",
+      "clearMqttConfig": "清除 MQTT 配置",
+      "status": "状态",
+      "invalidUrl": "MQTT 地址必须使用 ws:// 或 wss://。",
+      "statuses": {
+        "off": "关闭",
+        "connecting": "连接中",
+        "connected": "已连接",
+        "reconnecting": "重连中",
+        "error": "错误"
+      }
+    },
+    "appPanel": {
+      "motion": "动效",
+      "motionFull": "完整",
+      "motionReduced": "减少",
+      "exportSettings": "导出设置 JSON",
+      "importSettings": "导入设置 JSON",
+      "clearLocalSettings": "清除本地设置",
+      "exportPasswordConfirm": "MQTT 密码会以明文导出。",
+      "importPasswordConfirm": "导入配置可能以明文保存 MQTT 密码。",
+      "clearLocalSettingsConfirm": "清除本地设置？",
+      "noRecentErrors": "没有最近错误。",
+      "applicationLanguage": "应用语言",
+      "onboardingCompleted": "首次设置已完成",
+      "errorScopes": {
+        "audio": "音频",
+        "weather": "天气",
+        "settings": "设置",
+        "mqtt": "MQTT",
+        "app": "应用"
+      }
+    }
+  }
+}

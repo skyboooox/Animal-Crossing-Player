@@ -1,0 +1,185 @@
+{
+  "app": {
+    "loadingAria": "Loading application"
+  },
+  "common": {
+    "appName": "Animal Crossing Player",
+    "settings": "Settings",
+    "home": "Home",
+    "back": "Back",
+    "skip": "Skip",
+    "next": "Next",
+    "start": "Start",
+    "clear": "Clear",
+    "preview": "Preview",
+    "upload": "Upload",
+    "refresh": "Refresh",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "townTuneNotes": "Town tune notes"
+  },
+  "home": {
+    "aria": "Home",
+    "openSettings": "Open settings",
+    "high": "H",
+    "low": "L"
+  },
+  "weather": {
+    "values": {
+      "Sunny": "Sunny",
+      "Rainy": "Rainy",
+      "Snowy": "Snowy"
+    },
+    "locationLabels": {
+      "Fallback": "Fallback",
+      "Manual": "Manual"
+    }
+  },
+  "onboarding": {
+    "title": "Island setup",
+    "pageActionsAria": "Onboarding page actions",
+    "language": {
+      "title": "Language"
+    },
+    "bgm": {
+      "title": "BGM Version",
+      "choicesAria": "BGM version choices"
+    },
+    "townTune": {
+      "title": "Town Tune",
+      "url": "NookNet URL",
+      "noTune": "No town tune configured.",
+      "skip": "Skip town tune"
+    },
+    "audio": {
+      "title": "Audio Loading",
+      "progress": "Audio loading progress",
+      "waiting": "Waiting",
+      "starting": "Starting",
+      "ready": "Ready"
+    }
+  },
+  "permission": {
+    "title": "Audio permission",
+    "later": "Later",
+    "enable": "Enable audio",
+    "body": "Click Enable audio to allow browser playback."
+  },
+  "startupAudio": {
+    "title": "Start island radio",
+    "loadingTitle": "Audio Loading"
+  },
+  "settings": {
+    "modalAria": "Settings modal",
+    "launcherAria": "Settings launcher",
+    "panelAriaSuffix": "settings",
+    "categories": {
+      "Audio": {
+        "label": "Audio",
+        "description": "Playback, town tune, audio cache"
+      },
+      "Island": {
+        "label": "Island",
+        "description": "Weather, background, date and time"
+      },
+      "Remote": {
+        "label": "Remote",
+        "description": "MQTT connection and remote log"
+      },
+      "App": {
+        "label": "App",
+        "description": "Language, display, maintenance"
+      }
+    },
+    "sections": {
+      "Playback": "Playback",
+      "Town Tune": "Town Tune",
+      "Audio Cache": "Audio Cache",
+      "Weather & Location": "Weather & Location",
+      "Background": "Background",
+      "Date & Time": "Date & Time",
+      "MQTT Connection": "MQTT Connection",
+      "Remote Log": "Remote Log",
+      "Language": "Language",
+      "Display": "Display",
+      "Maintenance & Debug": "Maintenance & Debug"
+    },
+    "audio": {
+      "bgmVersion": "BGM version",
+      "bgmVolume": "BGM volume",
+      "townTuneVolume": "Town tune volume",
+      "hourlyFlow": "Hourly flow",
+      "preloadNextHour": "Preload next hour",
+      "fadeMs": "Fade ms",
+      "nookNetUrl": "NookNet URL",
+      "noTownTune": "No town tune configured.",
+      "cacheAudio": "Cache audio",
+      "cacheCurrentSet": "Cache current set",
+      "clearAudioCache": "Clear audio cache",
+      "cacheHint": "Cache is optional. Playback falls back to network loading."
+    },
+    "island": {
+      "kind": "Kind",
+      "solid": "Solid",
+      "preset": "Preset",
+      "uploaded": "Uploaded",
+      "solidColor": "Solid color",
+      "presetBackground": "Preset background {{id}}",
+      "clearUploadedBackground": "Clear uploaded background",
+      "readabilityOverlay": "Readability overlay",
+      "hourCycle": "Hour cycle",
+      "lunarDate": "Lunar date",
+      "mode": "Mode",
+      "autoLocation": "Auto location",
+      "manual": "Manual",
+      "manualWeather": "Manual weather",
+      "manualLocationLabel": "Manual location label",
+      "refreshWeather": "Refresh weather",
+      "current": "Current"
+    },
+    "remote": {
+      "noMessages": "No remote messages yet.",
+      "enableRemoteControl": "Enable remote control",
+      "webSocketUrl": "WebSocket URL",
+      "clientId": "Client ID",
+      "username": "Username",
+      "password": "Password",
+      "saveCredentials": "Save username/password",
+      "saveCredentialsConfirm": "Username and password will be stored in browser local storage as plain text.",
+      "baseTopic": "Base topic",
+      "retainState": "Retain state",
+      "testConnection": "Test connection",
+      "clearMqttConfig": "Clear MQTT config",
+      "status": "Status",
+      "invalidUrl": "MQTT URL must use ws:// or wss://.",
+      "statuses": {
+        "off": "Off",
+        "connecting": "Connecting",
+        "connected": "Connected",
+        "reconnecting": "Reconnecting",
+        "error": "Error"
+      }
+    },
+    "appPanel": {
+      "motion": "Motion",
+      "motionFull": "Full",
+      "motionReduced": "Reduced",
+      "exportSettings": "Export settings JSON",
+      "importSettings": "Import settings JSON",
+      "clearLocalSettings": "Clear local settings",
+      "exportPasswordConfirm": "MQTT password will be exported as plain text.",
+      "importPasswordConfirm": "Imported config may store MQTT password as plain text.",
+      "clearLocalSettingsConfirm": "Clear local settings?",
+      "noRecentErrors": "No recent errors.",
+      "applicationLanguage": "Application language",
+      "onboardingCompleted": "Onboarding completed",
+      "errorScopes": {
+        "audio": "Audio",
+        "weather": "Weather",
+        "settings": "Settings",
+        "mqtt": "MQTT",
+        "app": "App"
+      }
+    }
+  }
+}

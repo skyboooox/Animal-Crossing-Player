@@ -6,47 +6,53 @@
 
 ## 当前状态
 
-当前仓库还未完成 React + Vite 基线。`package.json` 仍需要在实施阶段更新脚本和依赖。
+当前仓库已完成 React + Vite 基线和四层实现。`package.json` 已包含开发、构建、单元测试、端到端测试和 lint 脚本。
 
-## 目标依赖
-
-运行依赖：
+## 运行依赖
 
 ```text
+animal-island-ui
+lucide-react
+lunar-javascript
+mqtt
 react
 react-dom
-vite
-animal-island-ui
-mqtt
-lunar-javascript
 ```
 
-开发依赖：
+## 开发依赖
 
 ```text
-@vitejs/plugin-react
-typescript
-vitest
+@playwright/test
+@testing-library/jest-dom
 @testing-library/react
 @testing-library/user-event
-playwright
+@types/react
+@types/react-dom
+@vitejs/plugin-react
 eslint
+eslint-plugin-react-hooks
+eslint-plugin-react-refresh
+jsdom
 prettier
+typescript-eslint
+typescript
+vite
+vitest
 ```
 
-## 目标脚本
+## 脚本
 
-实施阶段应补齐：
+当前脚本：
 
 ```json
 {
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "npm run build && playwright test",
     "lint": "eslint ."
   }
 }

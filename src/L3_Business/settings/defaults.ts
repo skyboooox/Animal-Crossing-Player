@@ -1,0 +1,86 @@
+import type { AppSettings, WeatherSnapshot } from '../../L4_Atom/types';
+import { createMqttClientId } from '../../L4_Atom/utils/ids';
+
+export function createFallbackWeatherSnapshot(now = new Date()): WeatherSnapshot {
+  return {
+    value: 'Sunny',
+    locationLabel: 'Fallback',
+    temperature: null,
+    temperatureMax: null,
+    temperatureMin: null,
+    weatherCode: null,
+    updatedAt: now.toISOString(),
+    source: 'fallback',
+  };
+}
+
+export function createDefaultSettings(): AppSettings {
+  return {
+    schemaVersion: 1,
+    language: 'en',
+    onboardingCompleted: false,
+    bgmVersion: 'New Horizons (Switch 2021)',
+    weather: {
+      mode: 'auto',
+      manualValue: 'Sunny',
+      manualLocationLabel: 'Manual',
+      lastAuto: null,
+    },
+    audio: {
+      bgmVolume: 0.7,
+      townTuneVolume: 0.8,
+      hourlyFlowEnabled: true,
+      preloadNextHour: true,
+      cacheEnabled: true,
+      fadeMs: 1800,
+    },
+    townTune: {
+      url: null,
+      title: null,
+      notes: [],
+    },
+    time: {
+      hourCycle: '24h',
+      lunarEnabled: false,
+    },
+    background: {
+      kind: 'preset',
+      solidColor: '#E8F6EF',
+      presetId: '0',
+      uploadedImageId: null,
+      readabilityOverlay: true,
+    },
+    display: {
+      motion: 'full',
+    },
+    mqtt: {
+      enabled: false,
+      url: 'ws://localhost:9001',
+      clientId: createMqttClientId(),
+      username: '',
+      password: '',
+      saveCredentials: false,
+      baseTopic: 'ac-player/v1/{clientId}',
+      qos: 0,
+      retainState: true,
+      retainCommand: false,
+    },
+  };
+}
+
+export function getEffectiveWeather(settings: AppSettings, now = new Date()): WeatherSnapshot {
+  if (settings.weather.mode === 'manual') {
+    return {
+      value: settings.weather.manualValue,
+      locationLabel: settings.weather.manualLocationLabel || 'Manual',
+      temperature: null,
+      temperatureMax: null,
+      temperatureMin: null,
+      weatherCode: null,
+      updatedAt: now.toISOString(),
+      source: 'manual',
+    };
+  }
+
+  return settings.weather.lastAuto ?? createFallbackWeatherSnapshot(now);
+}

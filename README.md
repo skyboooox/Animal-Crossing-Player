@@ -2,7 +2,7 @@
 
 Animal-Crossing-Player 是一个浏览器端动森氛围时钟与音乐播放器。重构目标是用 React + Vite 和 `animal-island-ui` 做一个安静的首页：只显示时间、日期、可选农历与天气，音频播放、岛歌、背景、天气位置、MQTT 远控等复杂设置都收进导览和设置页。
 
-当前仓库处于重构规格完成阶段，代码实现还未开始。旧项目 `/Users/skybox/Documents/GitHub/Animal-Crossing-Player.old` 只作为行为参考，不作为新架构模板。
+当前仓库已完成 React + Vite 四层实现。旧项目 `/Users/skybox/Documents/GitHub/Animal-Crossing-Player.old` 只作为行为参考，不作为新架构模板。
 
 ## 文档入口
 
@@ -58,6 +58,8 @@ Password: acplayer-dev
 
 ## 当前状态
 
-- `public/assets` 已包含音频、`audio.json`、`bell.mp3` 和 15 张背景预设图。
+- `src/L1_Entry`、`src/L2_Core`、`src/L3_Business`、`src/L4_Atom` 已按四层架构实现。
+- 导览、首页、设置、音频加载、岛歌预览、天气、背景、配置导入导出和 MQTT 远控已接入。
+- `public/assets` 已包含音频、`audio.json`、`bell.mp3`、15 张背景预设图和自托管 Fluent Emoji 图标。
 - 本地 Docker MQTT broker 已可运行。
-- 下一步是按 [PLAN.md](PLAN.md) 阶段 0 开始 React + Vite 项目基线实现。
+- 已通过 `npm run lint`、`npm run test`、`npm run build`、`npm run test:e2e`、`npm audit`。
