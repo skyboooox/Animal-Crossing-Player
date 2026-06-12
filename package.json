@@ -24,7 +24,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "animal-island-ui": "^0.9.5",
+    "animal-island-ui": "0.9.5",
     "lunar-javascript": "^1.7.3",
     "mqtt": "^5.10.4",
     "react": "^18.3.1",
