@@ -1,7 +1,8 @@
 import type { AppSettings, AudioManifest, AudioTrackRef, IslandWeather, LoadProgress } from '../../L4_Atom/types';
+import { getPublicAssetUrl } from '../../L4_Atom/utils/publicAssetUrl';
 import { selectTrack, getNextHour } from './selectTrack';
 
-export const BELL_URL = '/assets/bell.mp3';
+export const BELL_URL = getPublicAssetUrl('assets/bell.mp3');
 
 export interface AudioLoadItem {
   kind: 'bgm' | 'bell' | 'townTune';

@@ -1,178 +1,68 @@
-# Animal-Crossing-Player 项目说明
+# Animal-Crossing-Player Project
 
-## 文档定位
+## One-Line Definition
 
-本文是项目级 PRD，只定义产品目标、范围、非目标、约束和验收标准。实现顺序看 [PLAN.md](PLAN.md)，技术结构看 [ARCHITECTURE.md](ARCHITECTURE.md)，界面细节看 [UI_UX.md](UI_UX.md)。
+Animal-Crossing-Player is a browser-based Animal Crossing ambience clock that plays time, weather and user-setting-aware music.
 
-文档分层参考常见 PRD 写法：PRD 应说明产品目的、功能、假设、范围和成功标准；实现细节、架构决策和测试矩阵拆到独立文档，避免一个文件同时承担所有职责。
+## Goals
 
-## 产品定位
+- Show a minimal home surface: time, date, optional lunar date, weather and background.
+- Keep complex controls in onboarding and settings.
+- Select BGM by current hour, weather and selected game version.
+- Preserve hourly flow: fade BGM, play town tune if configured, play bell strikes, start next-hour BGM.
+- Support NookNet town tune import only.
+- Support weather by browser Geolocation + Open-Meteo or a manually specified location, refreshing every 10 minutes after startup.
+- Support browser MQTT remote control through MQTT over WebSocket.
+- Persist settings, uploaded backgrounds and audio cache in browser storage.
+- Install as a PWA with a web app manifest, install icons and Service Worker shell support.
+- Support English and Simplified Chinese UI through `public/locales/<language>.json`.
+- Reduce CPU/GPU cost without removing visible motion, modal shape effects or audio behavior.
 
-Animal-Crossing-Player 是运行在浏览器中的动森氛围时钟与音乐播放器。它根据现实时间、天气、用户选择的 BGM 版本和导入的岛歌，播放对应背景音乐，并在整点执行淡出、岛歌、钟声、下一小时 BGM 的衔接流程。
+## Non-Goals
 
-旧项目 `/Users/skybox/Documents/GitHub/Animal-Crossing-Player.old` 是行为参考，不是新项目架构模板。新项目使用 React + Vite 完全重构，UI 以 `animal-island-ui` 为主。
+- Do not recreate the old project architecture.
+- Do not put playback controls, MQTT status, debug state or error panels on the home screen.
+- Do not support native browser `mqtt://` or `mqtts://` TCP connections.
+- Do not add a manual 16-note town tune editor.
+- Do not require audio cache to exist before playback can work.
+- Do not store MQTT credentials unless the user enables credential saving and confirms the plaintext browser-storage risk.
 
-## 产品愿景
+## Users And Scenarios
 
-用户打开应用后看到的是一个安静的岛屿时钟：时间、日期、可选农历、天气和背景氛围构成首页。音频在后台持续营造岛屿环境；复杂控制不出现在首页，而是在首次导览和设置弹窗中完成。
+- User: someone who wants an Animal Crossing ambience clock in a browser.
+- Scenario: open the app, finish or skip onboarding, let current time and weather choose the background music, adjust advanced settings only when needed.
+- Success: the home screen stays quiet and readable while audio, weather, background and remote control work through existing settings flows.
 
-最终体验应像一台可配置的岛屿电台，而不是旧播放器的控件集合。
+## First-Version Scope
 
-## 目标用户
+- Required: onboarding, minimal home, audio preparation and playback, town tune URL import, weather/time display, settings modal, browser persistence, MQTT over WebSocket, tests.
+- Deferred: production deployment policy, final resource licensing review, Open-Meteo production usage and attribution policy.
+- Forbidden expansion: native MQTT TCP in browser, server-side account system, home-screen player dashboard.
 
-- 想在浏览器中播放动森氛围 BGM 的用户。
-- 希望根据现实时间和天气自动切换曲目的用户。
-- 希望导入个人岛歌，并在整点流程中听到它的用户。
-- 希望通过 MQTT 从其他设备远程控制播放器的用户。
+## Constraints
 
-## 核心目标
+- Runtime: browser app built with React, Vite and TypeScript.
+- UI: primary controls use `animal-island-ui`; local UI atoms live in `src/L4_Atom/ui`.
+- Architecture: use `src/L1_Entry`, `src/L2_Core`, `src/L3_Business`, `src/L4_Atom`.
+- Data: settings and user assets stay in browser storage; MQTT password never appears in state messages or logs.
+- Integration: MQTT remote control is WebSocket-only; automatic weather uses Geolocation and Open-Meteo.
+- Assets: `public/assets/audio.json` and asset directories are implementation facts; resource licensing remains a release blocker.
 
-- 用 `animal-island-ui` 重建 UI，而不是维护旧项目自写样式。
-- 首页只显示时间、日期、可选农历和天气。
-- 首次进入显示导览弹窗：语言、BGM 版本、岛歌导入、音频加载。
-- 跳过导览时使用默认配置，并直接进入音频加载页。
-- 首次导览完成后再次打开页面时，先显示启动音频弹窗，自动加载音频，加载完成后由用户点击 `开始` 播放。
-- 所有弹窗的项目内容区域居中显示，不能偏向左上角。
-- 音频加载必须在用户选择后发生，首批只加载本次需要用到的音频，并显示进度。
-- 设置以弹窗形式打开，初始层是图标加描述的启动台，第二层是所选设置分区内容。
-- 字体必须使用与动森风格匹配的圆润 UI 字体栈：英文优先 Nunito，中文优先 Noto Sans SC，并保留系统回退。
-- UI 文案必须从 `public/locales/<language>.json` 读取，当前覆盖 English 和简体中文，并保留新增语言的注册入口；切换语言必须热切换首页、导览、设置和弹窗文案。
-- 浏览器可通过 MQTT over WebSocket 接入远程控制。
-- 使用浏览器存储缓存音频和用户上传背景，但缓存不能成为播放前提。
+## Acceptance Criteria
 
-## 核心能力
+- `npm run test`, `npm run lint`, `npm run build` pass before code handoff.
+- UI changes that affect user flows pass relevant Playwright coverage or equivalent browser verification.
+- Home screen only exposes allowed time/date/weather/background information.
+- Onboarding can choose language, BGM version, town tune and initial audio loading.
+- Startup after onboarding shows an audio prompt and waits for a user gesture before playback.
+- Settings are modal-based and cover Audio, Island, Remote and App sections.
+- MQTT accepts only `ws://` or `wss://`, maps commands through L2, publishes ACK/state without password leakage.
+- Public behavior changes update `docs/contract-index.md`, relevant docs and tests.
+- Performance refactors record before/after browser evidence and preserve observable visual/audio parity.
 
-### 首页
+## Open Release Risks
 
-- 显示当前时间。
-- 显示当前日期。
-- 支持农历显示开关。
-- 显示当前天气、温度、最高 / 最低温和位置摘要。
-- 支持纯色、预设图片或用户上传图片背景。
-- 不展示音量、BGM 版本、岛歌、MQTT、调试信息、播放状态或错误状态。
-
-### 首次导览
-
-- 导览是类似弹窗的页面。
-- 页面左上角固定显示 `跳过`，不放在导览弹窗内部。
-- 页面右上角固定显示设置入口，不放在导览弹窗内部。
-- 右下角固定显示下一步或开始入口。
-- 导览打开时，首页右上角设置入口不显示，避免和首次设置页面右上角设置入口重复。
-- 第一页选择语言。
-- 切换语言后立即热切换当前导览文案和后续导览文案。
-- 第二页选择 BGM 历年版本，四个版本以双排网格显示。
-- 第三页导入或跳过岛歌。
-- 第四页加载首批音频。
-- 音频加载失败时自动重试，不显示手动重试按钮。
-- 音频加载完成后才允许点击 `开始`。
-- 点击 `开始` 后进入首页并直接尝试播放 BGM。
-- 点击 `跳过` 使用默认配置：English、天气自动定位、`New Horizons (Switch 2021)`、无岛歌、默认音量，然后进入第四页音频加载。
-
-### 音频播放
-
-- 按当前小时、天气和 BGM 版本选择 BGM。
-- 首次导览完成后的再次启动不自动播放；页面先弹窗加载音频，加载完成后等待用户点击 `开始`，以满足浏览器用户手势播放策略。
-- 保留整点流程：BGM 淡出、岛歌、钟声、下一小时 BGM。
-- BGM 音量与岛歌音量分开设置。
-- 没有岛歌时，整点流程只播放钟声。
-- 播放开始后预加载下一小时 BGM。
-
-### 岛歌
-
-- 只支持 NookNet URL。
-- 不提供手动 16 音符编辑器。
-- URL 解析、音符集合和预览规则以 [TOWN_TUNE.md](TOWN_TUNE.md) 为准。
-
-### 天气与时间
-
-- 天气支持自动定位和手动设置。
-- 自动天气使用浏览器 Geolocation + Open-Meteo。
-- 手动天气允许 Sunny / Rainy / Snowy 和位置显示名。
-- 时间支持 24 小时制和 12 小时制。
-- 农历显示使用 `lunar-javascript`。
-- 详细规则以 [WEATHER_TIME.md](WEATHER_TIME.md) 为准。
-
-### 设置
-
-设置必须是弹窗，不跳到独立全屏设置页。菜单只有两个层级：
-
-- 初始层：图标 + 描述的启动台入口。
-- 第二层：所选分区的设置内容。
-- 弹窗内标题、启动台、分区内容和操作区整体居中，不贴左上角。
-
-一级入口为：
-
-- `Audio`：Playback、Town Tune、Audio Cache。
-- `Island`：Weather & Location、Background、Date & Time。
-- `Remote`：MQTT Connection、Remote Log。
-- `App`：Language、Display、Maintenance & Debug。
-
-### 国际化
-
-- 当前支持 `en` 和 `zh-CN`。
-- 每个语言必须有独立 JSON 语言包，文件放在 `public/locales/<language>.json`。
-- 语言选项来自统一语言注册表，不在单个组件内手写分支。
-- 所有用户可见 UI 文案、设置标签、按钮、空状态、确认提示、aria label、天气显示名都从当前语言 JSON 读取。
-- 协议字段、存储键、MQTT command / ack / state payload、BGM 版本名、NookNet URL、资源 manifest 路径不翻译。
-- 切换语言后不刷新页面、不关闭弹窗，当前页面和后续页面立即使用新语言。
-- 新增语言时只扩展语言常量、语言元数据和 `public/locales` 内对应 JSON 语言包，不重写组件结构。
-
-### MQTT 远程控制
-
-- 浏览器端只支持 MQTT over WebSocket，即 `ws://` 或 `wss://`。
-- HTTPS 部署场景优先使用 `wss://`。
-- 不支持原生 TCP `mqtt://` 或 `mqtts://`。
-- 远程命令必须映射到本地已有状态与动作，不绕开播放器状态机。
-- Topic、payload、ACK 和状态发布以 [MQTT_PROTOCOL.md](MQTT_PROTOCOL.md) 为准。
-
-## 技术事实
-
-- 当前仓库资源位于 `public/assets`。
-- 当前资源包含 `audio.json`、四个 BGM 版本目录、`bell.mp3` 和 15 张背景预设图。
-- `Wild World (DS 2005)` 只有 Sunny 24 小时曲目；Rainy / Snowy 需要回退 Sunny。
-- `animal-island-ui` 使用时必须导入 `animal-island-ui/style`。
-- Nunito / Noto Sans SC 使用 `animal-island-ui` 随包字体资源，不能只写字体栈而不加载 UI 样式。
-- 本地 Docker Mosquitto 已配置，可用于 MQTT WebSocket 联调。
-- 部署方式暂未确定；实现阶段先保证 Vite 本地开发可运行。
-
-## 非目标
-
-- 不内置生产 MQTT Broker。
-- 不支持浏览器直接连接原生 TCP MQTT。
-- 不在首页提供完整播放器控制台。
-- 不在首页显示当前 BGM 名、播放状态、加载错误或音频授权状态。
-- 不在本文件定义 Sprint、代码模块或测试矩阵。
-- 不直接复制任天堂官方素材、角色、商标图形或受保护 UI。
-- 不把生产密钥、生产 MQTT 凭据或天气服务密钥硬编码进仓库。
-
-## 风险与约束
-
-- 音频资产、游戏名称和视觉风格存在版权与商标风险，发布前需确认使用范围和分发方式。
-- 浏览器音频播放可能受用户手势策略限制，启动失败必须使用导览或阻塞浮层处理，不在首页显示。
-- 浏览器存储可能被用户或浏览器清理，缓存不能作为唯一数据来源。
-- MQTT 用户名密码保存必须默认关闭；用户勾选后必须提示明文存储风险。
-- 设置导出包含 MQTT 密码时，必须提示密码将会明文进入配置文件。
-- Open-Meteo 免费能力适合开发和非商业使用；发布形态改变时需要重新确认用量和许可。
-
-## 验收标准
-
-- 首次进入显示四页导览弹窗，页面左上角可跳过，页面右上角可进入设置，弹窗右下角可下一步或开始。
-- 导览打开时首页右上角设置入口不显示。
-- 导览语言切换立即热切换当前和后续导览文案。
-- 设置页语言切换立即热切换首页、导览、设置和弹窗文案。
-- 导览 BGM 版本列表为双排网格。
-- 点击 `跳过` 使用默认配置并进入第四页音频加载。
-- 导览第四页显示首批音频加载进度，失败自动重试且不显示 Retry 按钮，加载完成前不能点击 `开始`。
-- 点击 `开始` 后进入首页并直接尝试播放 BGM。
-- 首次导览完成后的再次打开先显示启动音频弹窗，音频加载完成前不能点击 `开始`，点击后开始播放。
-- 首页只显示时间、日期、可选农历和天气。
-- 设置以弹窗形式呈现，初始层是图标 + 描述启动台，第二层覆盖所有当前设置项。
-- 首页、导览和设置使用同一套圆润游戏感字体；时间数字加粗且保持等宽数字，不回退到普通系统 sans-serif。
-- BGM 音量和岛歌音量可以独立调整。
-- 天气支持自动定位和手动设置。
-- 岛歌导入只支持 NookNet URL。
-- 时间支持 24 小时制和 12 小时制。
-- 背景支持纯色、预设图片和用户上传图片。
-- 设置页支持导出 / 导入配置；含 MQTT 密码导出时必须二次确认明文风险。
-- MQTT 只能配置 `ws://` 或 `wss://` 地址，并明确拒绝原生 TCP MQTT。
-- 音频缓存是可选增强；缓存不可用时仍可完成播放。
+- Resource authorization for bundled audio and images.
+- Production HTTPS and `wss://` broker policy.
+- Open-Meteo production usage, attribution and rate expectations.
+- Final performance budgets need a measured baseline on the target desktop and mobile-class profiles.

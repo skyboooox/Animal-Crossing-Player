@@ -3,18 +3,16 @@
     "loadingAria": "正在加载应用"
   },
   "common": {
-    "appName": "动物森友会播放器",
     "settings": "设置",
     "home": "首页",
     "back": "返回",
     "skip": "跳过",
-    "next": "下一步",
     "start": "开始",
     "clear": "清除",
+    "close": "关闭",
     "preview": "预览",
+    "stop": "停止",
     "upload": "上传",
-    "refresh": "刷新",
-    "cancel": "取消",
     "continue": "继续",
     "townTuneNotes": "岛歌音符"
   },
@@ -32,8 +30,28 @@
     },
     "locationLabels": {
       "Fallback": "备用天气",
-      "Manual": "手动"
+      "Manual": "手动",
+      "Local": "本地天气"
     }
+  },
+  "errors": {
+    "Only NookNet tune URLs are supported.": "只支持 NookNet 岛歌链接。",
+    "The URL must include a melody parameter.": "链接必须包含 melody 参数。",
+    "Please paste a NookNet URL that includes melody=.": "请粘贴包含 melody= 的 NookNet 链接。",
+    "The melody must contain 16 notes.": "岛歌必须包含 16 个音符。",
+    "Unsupported note token.": "包含不支持的音符。",
+    "Town tune preview failed.": "岛歌预览失败。",
+    "MQTT connection failed.": "MQTT 连接失败。",
+    "Audio manifest is not available.": "音频清单不可用。",
+    "Audio loading failed.": "音频加载失败。",
+    "Browser blocked audio playback.": "浏览器阻止了音频播放。",
+    "Hourly bell failed.": "整点报时失败。",
+    "Hourly chime failed.": "整点报时失败。",
+    "Current BGM failed to load.": "当前背景音乐加载失败。",
+    "Web Audio is not available.": "当前浏览器不支持 Web Audio。",
+    "Geolocation is not available.": "当前浏览器不支持定位。",
+    "Geolocation failed.": "定位失败。",
+    "Weather refresh failed.": "天气刷新失败。"
   },
   "onboarding": {
     "title": "岛屿设置",
@@ -66,8 +84,7 @@
     "body": "点击启用音频以允许浏览器播放。"
   },
   "startupAudio": {
-    "title": "启动岛屿电台",
-    "loadingTitle": "音频加载"
+    "loadingTitle": "正在加载音频"
   },
   "settings": {
     "modalAria": "设置弹窗",
@@ -75,11 +92,11 @@
     "panelAriaSuffix": "设置",
     "categories": {
       "Audio": {
-        "label": "音频",
+        "label": "声音",
         "description": "播放、岛歌、音频缓存"
       },
       "Island": {
-        "label": "岛屿",
+        "label": "显示",
         "description": "天气、背景、日期和时间"
       },
       "Remote": {
@@ -87,8 +104,8 @@
         "description": "MQTT 连接和远控日志"
       },
       "App": {
-        "label": "应用",
-        "description": "语言、显示、维护"
+        "label": "系统",
+        "description": "语言、维护"
       }
     },
     "sections": {
@@ -101,39 +118,36 @@
       "MQTT Connection": "MQTT 连接",
       "Remote Log": "远控日志",
       "Language": "语言",
-      "Display": "显示",
-      "Maintenance & Debug": "维护和调试"
+      "Maintenance & Debug": "维护和测试"
     },
     "audio": {
       "bgmVersion": "背景音乐版本",
       "bgmVolume": "背景音乐音量",
       "townTuneVolume": "岛歌音量",
-      "hourlyFlow": "整点流程",
-      "preloadNextHour": "预加载下一小时",
-      "fadeMs": "淡入淡出毫秒",
+      "hourlyFlow": "整点报时",
       "nookNetUrl": "NookNet 链接",
       "noTownTune": "还没有设置岛歌。",
       "cacheAudio": "缓存音频",
       "cacheCurrentSet": "缓存当前音频组",
       "clearAudioCache": "清除音频缓存",
-      "cacheHint": "缓存只是增强能力。播放会在缓存不可用时回退到网络加载。"
+      "reloadAudio": "重新加载"
     },
     "island": {
-      "kind": "类型",
+      "kind": "背景类型",
       "solid": "纯色",
       "preset": "预设",
-      "uploaded": "已上传",
-      "solidColor": "纯色颜色",
+      "uploaded": "上传图片",
+      "solidColor": "背景颜色",
       "presetBackground": "预设背景 {{id}}",
       "clearUploadedBackground": "清除上传背景",
       "readabilityOverlay": "可读性遮罩",
-      "hourCycle": "小时制",
-      "lunarDate": "农历",
+      "presetPan": "背景平移",
+      "hourCycle": "24小时制",
+      "lunarDate": "农历日期",
       "mode": "模式",
       "autoLocation": "自动定位",
-      "manual": "手动",
-      "manualWeather": "手动天气",
-      "manualLocationLabel": "手动位置名称",
+      "manual": "手动指定地点",
+      "manualLocationLabel": "地点",
       "refreshWeather": "刷新天气",
       "current": "当前"
     },
@@ -161,24 +175,26 @@
       }
     },
     "appPanel": {
-      "motion": "动效",
-      "motionFull": "完整",
-      "motionReduced": "减少",
-      "exportSettings": "导出设置 JSON",
-      "importSettings": "导入设置 JSON",
+      "exportSettings": "导出设置",
+      "importSettings": "导入设置",
       "clearLocalSettings": "清除本地设置",
+      "triggerHourlyChime": "测试整点报时",
+      "settingsFiles": "设置文件",
+      "testTools": "测试工具",
+      "localData": "本地数据",
+      "recentErrors": "最近错误",
       "exportPasswordConfirm": "MQTT 密码会以明文导出。",
       "importPasswordConfirm": "导入配置可能以明文保存 MQTT 密码。",
       "clearLocalSettingsConfirm": "清除本地设置？",
       "noRecentErrors": "没有最近错误。",
       "applicationLanguage": "应用语言",
-      "onboardingCompleted": "首次设置已完成",
+      "enterOnboarding": "进入首次设置",
       "errorScopes": {
         "audio": "音频",
         "weather": "天气",
         "settings": "设置",
         "mqtt": "MQTT",
-        "app": "应用"
+        "app": "系统"
       }
     }
   }

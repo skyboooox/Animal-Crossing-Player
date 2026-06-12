@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { AppProvider } from './providers';
+import { registerServiceWorker } from './adapters/registerServiceWorker';
 import 'animal-island-ui/style';
 import './styles.css';
 
@@ -18,3 +19,5 @@ createRoot(root).render(
     </AppProvider>
   </StrictMode>,
 );
+
+registerServiceWorker();

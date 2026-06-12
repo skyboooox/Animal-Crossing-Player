@@ -1,7 +1,9 @@
 import type { WeatherSnapshot } from '../types';
 import { mapWeatherCode } from './mapWeatherCode';
+import { formatTimezoneLocation } from './reverseGeocoding';
 
 export interface OpenMeteoResponse {
+  timezone?: string;
   current?: {
     temperature_2m?: number;
     weather_code?: number;
@@ -45,7 +47,7 @@ export async function fetchOpenMeteoWeather(
       rain: current.rain ?? null,
       snowfall: current.snowfall ?? null,
     }),
-    locationLabel: `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+    locationLabel: formatTimezoneLocation(data.timezone),
     temperature: current.temperature_2m ?? null,
     temperatureMax: data.daily?.temperature_2m_max?.[0] ?? null,
     temperatureMin: data.daily?.temperature_2m_min?.[0] ?? null,

@@ -2,13 +2,12 @@ import type {
   AppState,
   AppSettings,
   BgmVersion,
-  IslandWeather,
   RemoteAck,
   RemoteCommand,
   RemoteCommandType,
   RemoteStateMessage,
 } from './types';
-import { BGM_VERSIONS, WEATHER_VALUES } from './types';
+import { BGM_VERSIONS } from './types';
 import { parseNookNetUrl } from '../L3_Business/townTune/parseNookNetUrl';
 import { isWebSocketUrl } from '../L4_Atom/utils/url';
 
@@ -123,28 +122,27 @@ export function handleRemoteCommand(state: AppState, command: RemoteCommand): Re
           effect: 'refreshWeather',
         };
       }
-      if (command.mode !== 'manual' || !command.weather || !WEATHER_VALUES.includes(command.weather as IslandWeather)) {
-        return reject(state, command, 'Weather mode or value is invalid.');
+      if (command.mode !== 'manual' || typeof command.locationLabel !== 'string' || command.locationLabel.trim().length === 0) {
+        return reject(state, command, 'Weather mode or location is invalid.');
       }
+      const locationLabel = command.locationLabel.trim();
       return {
         state: applySettings(state, {
           ...state.settings,
           weather: {
             ...state.settings.weather,
             mode: 'manual',
-            manualValue: command.weather,
-            manualLocationLabel: command.locationLabel ?? 'Manual',
+            manualLocationLabel: locationLabel,
+            lastAuto: state.settings.weather.manualLocationLabel === locationLabel ? state.settings.weather.lastAuto : null,
           },
         }),
-        ack: buildAck(command, 'applied', 'Manual weather updated.'),
+        ack: buildAck(command, 'accepted', 'Manual location updated.'),
         shouldPublishState: true,
-        effect: 'none',
+        effect: 'refreshWeather',
       };
     }
     case 'refreshWeather':
-      return state.settings.weather.mode === 'manual'
-        ? { state, ack: buildAck(command, 'ignored', 'Manual weather mode is active.'), shouldPublishState: false, effect: 'none' }
-        : { state, ack: buildAck(command, 'accepted', 'Weather refresh requested.'), shouldPublishState: true, effect: 'refreshWeather' };
+      return { state, ack: buildAck(command, 'accepted', 'Weather refresh requested.'), shouldPublishState: true, effect: 'refreshWeather' };
     case 'setTownTune': {
       if (typeof command.url !== 'string') {
         return reject(state, command, 'Town tune URL is required.');

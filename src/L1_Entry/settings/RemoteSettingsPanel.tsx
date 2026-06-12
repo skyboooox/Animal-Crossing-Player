@@ -143,6 +143,7 @@ export function RemoteSettingsPanel({ subPage, state, text, actions }: RemoteSet
       <div className="panel-actions">
         <Button
           icon={<AppIcon name="remote" size={16} />}
+          type="primary"
           disabled={Boolean(validation)}
           onClick={() => actions.updateSettings((current) => ({ ...current, mqtt: { ...current.mqtt, enabled: true } }))}
         >
@@ -150,6 +151,7 @@ export function RemoteSettingsPanel({ subPage, state, text, actions }: RemoteSet
         </Button>
         <Button
           icon={<AppIcon name="clear" size={16} />}
+          type="primary"
           danger
           onClick={() =>
             actions.updateSettings((current) => ({

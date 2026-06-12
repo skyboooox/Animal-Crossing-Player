@@ -3,7 +3,13 @@ import { BELL_URL, planInitialAudioLoad } from '../L3_Business/audio/planAudioLo
 import { getNextHour, selectTrack } from '../L3_Business/audio/selectTrack';
 import { createAudioCacheService, type AudioCacheService } from '../L4_Atom/storage/cacheStorageStore';
 import { loadAudioResource } from '../L4_Atom/audio/audioBufferLoader';
-import { WebAudioEngine } from '../L4_Atom/audio/webAudio';
+import { WebAudioEngine, type AudioPlaybackHandle } from '../L4_Atom/audio/webAudio';
+import {
+  getBellStrikeCount,
+  HOURLY_BGM_FADE_OUT_MS,
+  TOWN_TUNE_PREVIEW_DUCK_FADE_MS,
+  TOWN_TUNE_PREVIEW_DUCK_MULTIPLIER,
+} from '../L4_Atom/audio/townTuneBell';
 
 interface PreparedAudio {
   track: AudioTrackRef;
@@ -17,6 +23,9 @@ export class AudioCore {
   private cache: AudioCacheService;
   private prepared: PreparedAudio | null = null;
   private currentBuffer: AudioBuffer | null = null;
+  private bellBuffer: AudioBuffer | null = null;
+  private activeTownTunePreview: AudioPlaybackHandle | null = null;
+  private hourlyFlowRunning = false;
 
   constructor(cache = createAudioCacheService()) {
     this.cache = cache;
@@ -73,6 +82,10 @@ export class AudioCore {
     }
 
     this.currentBuffer = await this.engine.decode(this.prepared.bgmBytes);
+    if (this.prepared.bellBytes) {
+      this.bellBuffer = await this.engine.decode(this.prepared.bellBytes);
+    }
+    this.engine.setEffectVolume(settings.audio.townTuneVolume);
     await this.engine.playLoop(this.currentBuffer, settings.audio.bgmVolume);
     return this.prepared.track;
   }
@@ -81,15 +94,46 @@ export class AudioCore {
     this.engine.setVolume(volume);
   }
 
+  setTownTuneVolume(volume: number): void {
+    this.engine.setEffectVolume(volume);
+  }
+
   stop(): void {
+    this.stopTownTunePreview();
     this.engine.stop();
+  }
+
+  isTownTunePreviewing(): boolean {
+    return this.activeTownTunePreview !== null;
+  }
+
+  stopTownTunePreview(): void {
+    const preview = this.activeTownTunePreview;
+    this.activeTownTunePreview = null;
+    preview?.stop();
+    this.engine.setBgmDuck(1, TOWN_TUNE_PREVIEW_DUCK_FADE_MS);
   }
 
   async previewTownTune(notes: TownTuneNote[], volume: number): Promise<void> {
     if (notes.length === 0) {
       return;
     }
-    await this.engine.playToneSequence(notes, volume);
+
+    const bell = await this.getBellBuffer();
+    this.stopTownTunePreview();
+    let playback: AudioPlaybackHandle | null = null;
+
+    try {
+      this.engine.setBgmDuck(TOWN_TUNE_PREVIEW_DUCK_MULTIPLIER, TOWN_TUNE_PREVIEW_DUCK_FADE_MS);
+      playback = await this.engine.startTownTuneFromBell(bell, notes, volume);
+      this.activeTownTunePreview = playback;
+      await playback.finished;
+    } finally {
+      if (!playback || this.activeTownTunePreview === playback) {
+        this.activeTownTunePreview = null;
+        this.engine.setBgmDuck(1, TOWN_TUNE_PREVIEW_DUCK_FADE_MS);
+      }
+    }
   }
 
   async preloadNextHour(manifest: AudioManifest, settings: AppSettings, weather: IslandWeather, hour: number): Promise<AudioTrackRef> {
@@ -105,28 +149,63 @@ export class AudioCore {
     const currentTrack = selectTrack(manifest, settings.bgmVersion, weather, hour);
     const nextTrack = selectTrack(manifest, settings.bgmVersion, weather, getNextHour(hour));
 
-    if (settings.townTune.notes.length > 0) {
-      await this.engine.playToneSequence(settings.townTune.notes, settings.audio.townTuneVolume);
+    if (this.hourlyFlowRunning) {
+      return { currentTrack, nextTrack };
     }
 
-    if (this.prepared?.bellBytes) {
-      const bell = await this.engine.decode(this.prepared.bellBytes);
-      await this.engine.playBufferOnce(bell, settings.audio.townTuneVolume);
-    }
+    this.hourlyFlowRunning = true;
+    try {
+      this.stopTownTunePreview();
+      await this.engine.fadeOutBgm(HOURLY_BGM_FADE_OUT_MS);
+      const bell = await this.getBellBuffer(settings.audio.cacheEnabled);
 
-    const loaded = await loadAudioResource(currentTrack.url, settings.audio.cacheEnabled ? this.cache : null);
-    const buffer = await this.engine.decode(loaded.bytes);
-    await this.engine.playLoop(buffer, settings.audio.bgmVolume);
+      await this.engine.playBellPlaylistFromBell(bell, settings.townTune.notes, getBellStrikeCount(hour), settings.audio.townTuneVolume);
 
-    if (settings.audio.preloadNextHour) {
+      const loaded = await loadAudioResource(currentTrack.url, settings.audio.cacheEnabled ? this.cache : null);
+      const buffer = await this.engine.decode(loaded.bytes);
+      this.currentBuffer = buffer;
+      await this.engine.playLoop(buffer, settings.audio.bgmVolume);
+
       void loadAudioResource(nextTrack.url, settings.audio.cacheEnabled ? this.cache : null);
+    } finally {
+      this.hourlyFlowRunning = false;
     }
 
     return { currentTrack, nextTrack };
   }
 
+  async triggerHourlyChime(settings: AppSettings, hour: number): Promise<void> {
+    if (this.hourlyFlowRunning) {
+      return;
+    }
+
+    this.hourlyFlowRunning = true;
+    try {
+      this.stopTownTunePreview();
+      const bell = await this.getBellBuffer(settings.audio.cacheEnabled);
+      await this.engine.playBellPlaylistFromBell(bell, settings.townTune.notes, getBellStrikeCount(hour), settings.audio.townTuneVolume);
+    } finally {
+      this.hourlyFlowRunning = false;
+    }
+  }
+
   async clearAudioCache(): Promise<void> {
     await this.cache.clear();
+  }
+
+  private async getBellBuffer(cacheEnabled = true): Promise<AudioBuffer> {
+    if (this.bellBuffer) {
+      return this.bellBuffer;
+    }
+
+    if (this.prepared?.bellBytes) {
+      this.bellBuffer = await this.engine.decode(this.prepared.bellBytes);
+      return this.bellBuffer;
+    }
+
+    const loaded = await loadAudioResource(BELL_URL, cacheEnabled ? this.cache : null);
+    this.bellBuffer = await this.engine.decode(loaded.bytes);
+    return this.bellBuffer;
   }
 }
 

@@ -1,3 +1,5 @@
+import { getPublicAssetUrl } from '../utils/publicAssetUrl';
+
 export type AppIconName =
   | 'app'
   | 'audio'
@@ -53,7 +55,7 @@ export function AppIcon({ className, name, size = 18 }: AppIconProps) {
       className={classes}
       draggable={false}
       height={size}
-      src={`/assets/icons/fluent-emoji/${ICON_SLUGS[name]}.svg`}
+      src={getPublicAssetUrl(`assets/icons/fluent-emoji/${ICON_SLUGS[name]}.svg`)}
       width={size}
     />
   );

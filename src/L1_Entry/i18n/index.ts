@@ -1,5 +1,6 @@
 import type { IslandWeather, Language } from '../../L2_Core/types';
 import { LANGUAGES } from '../../L2_Core/types';
+import { isCoordinateLocationLabel } from '../../L4_Atom/weatherApi/reverseGeocoding';
 import { useEffect, useState } from 'react';
 
 type CategoryText = {
@@ -14,18 +15,16 @@ export interface UiText {
     loadingAria: string;
   };
   common: {
-    appName: string;
     settings: string;
     home: string;
     back: string;
     skip: string;
-    next: string;
     start: string;
     clear: string;
+    close: string;
     preview: string;
+    stop: string;
     upload: string;
-    refresh: string;
-    cancel: string;
     continue: string;
     townTuneNotes: string;
   };
@@ -39,6 +38,7 @@ export interface UiText {
     values: TextRecord<IslandWeather>;
     locationLabels: Record<string, string>;
   };
+  errors: Record<string, string>;
   onboarding: {
     title: string;
     pageActionsAria: string;
@@ -70,7 +70,6 @@ export interface UiText {
     body: string;
   };
   startupAudio: {
-    title: string;
     loadingTitle: string;
   };
   settings: {
@@ -89,14 +88,12 @@ export interface UiText {
       bgmVolume: string;
       townTuneVolume: string;
       hourlyFlow: string;
-      preloadNextHour: string;
-      fadeMs: string;
       nookNetUrl: string;
       noTownTune: string;
       cacheAudio: string;
       cacheCurrentSet: string;
       clearAudioCache: string;
-      cacheHint: string;
+      reloadAudio: string;
     };
     island: {
       kind: string;
@@ -107,12 +104,12 @@ export interface UiText {
       presetBackground: string;
       clearUploadedBackground: string;
       readabilityOverlay: string;
+      presetPan: string;
       hourCycle: string;
       lunarDate: string;
       mode: string;
       autoLocation: string;
       manual: string;
-      manualWeather: string;
       manualLocationLabel: string;
       refreshWeather: string;
       current: string;
@@ -135,18 +132,20 @@ export interface UiText {
       statuses: Record<string, string>;
     };
     appPanel: {
-      motion: string;
-      motionFull: string;
-      motionReduced: string;
       exportSettings: string;
       importSettings: string;
       clearLocalSettings: string;
+      triggerHourlyChime: string;
+      settingsFiles: string;
+      testTools: string;
+      localData: string;
+      recentErrors: string;
       exportPasswordConfirm: string;
       importPasswordConfirm: string;
       clearLocalSettingsConfirm: string;
       noRecentErrors: string;
       applicationLanguage: string;
-      onboardingCompleted: string;
+      enterOnboarding: string;
       errorScopes: Record<string, string>;
     };
   };
@@ -259,6 +258,15 @@ export function formatWeatherName(text: UiText, weather: IslandWeather): string 
   return text.weather.values[weather] ?? weather;
 }
 
+export function formatLocationLabelValue(labels: Record<string, string>, label: string): string {
+  const translated = labels[label] ?? label;
+  return isCoordinateLocationLabel(translated) ? (labels.Local ?? 'Local') : translated;
+}
+
 export function formatLocationLabel(text: UiText, label: string): string {
-  return text.weather.locationLabels[label as keyof typeof text.weather.locationLabels] ?? label;
+  return formatLocationLabelValue(text.weather.locationLabels, label);
+}
+
+export function formatErrorMessage(text: UiText, message: string): string {
+  return text.errors[message] ?? message;
 }

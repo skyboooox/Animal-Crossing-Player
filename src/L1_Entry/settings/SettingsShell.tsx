@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AppActions } from '../providers';
 import type { AppState } from '../../L2_Core/types';
+import { AnimatedPanel } from '../../L4_Atom/ui/AnimatedPanel';
 import { AppIcon } from '../../L4_Atom/ui/AppIcon';
 import { GameHeading } from '../../L4_Atom/ui/GameHeading';
 import { Button, Card } from '../../L4_Atom/ui/animalIsland';
@@ -11,6 +12,7 @@ import { IslandSettingsPanel } from './IslandSettingsPanel';
 import { RemoteSettingsPanel } from './RemoteSettingsPanel';
 import type { SettingsCategory } from './settingsTypes';
 import type { UiText } from '../i18n';
+import { incrementRenderCount } from '../renderDiagnostics';
 
 interface SettingsShellProps {
   state: AppState;
@@ -31,8 +33,16 @@ const LAUNCHER_ITEMS: Array<{
 ];
 
 export function SettingsShell({ state, text, actions, onClose }: SettingsShellProps) {
+  incrementRenderCount('SettingsShell');
   const [category, setCategory] = useState<SettingsCategory | null>(null);
+  const motionPanelRef = useRef<HTMLDivElement | null>(null);
   const categoryText = category ? text.settings.categories[category] : null;
+
+  useEffect(() => {
+    if (motionPanelRef.current) {
+      motionPanelRef.current.scrollTop = 0;
+    }
+  }, [category]);
 
   return (
     <div className="settings-shell">
@@ -43,39 +53,38 @@ export function SettingsShell({ state, text, actions, onClose }: SettingsShellPr
         </div>
         <div className="settings-actions">
           {category ? (
-            <Button className="settings-nav-button settings-nav-button--back" icon={<AppIcon name="settings" size={16} />} type="text" onClick={() => setCategory(null)}>
-              {text.common.settings}
+            <Button className="settings-nav-button settings-nav-button--back" type="primary" onClick={() => setCategory(null)}>
+              {text.common.back}
             </Button>
           ) : null}
-          <Button className="settings-nav-button settings-nav-button--home" icon={<AppIcon name="home" size={16} />} type="text" onClick={onClose}>
-            {text.common.home}
-          </Button>
         </div>
       </header>
-      {!category ? (
-        <nav className="settings-launcher" aria-label={text.settings.launcherAria}>
-          {LAUNCHER_ITEMS.map((item) => {
-            const launcherText = text.settings.categories[item.category];
-            return (
-              <button key={item.category} className="settings-launcher__button" type="button" onClick={() => setCategory(item.category)}>
-                <Card className="settings-launcher__item" pattern={item.pattern}>
-                  <span className="settings-launcher__icon">{item.icon}</span>
-                  <span className="settings-launcher__title">{launcherText.label}</span>
-                  <span className="settings-launcher__description">{launcherText.description}</span>
-                </Card>
-              </button>
-            );
-          })}
-        </nav>
-      ) : null}
-      {category ? (
-        <main className="settings-panel" aria-label={`${categoryText?.label ?? category} ${text.settings.panelAriaSuffix}`}>
-          {category === 'Audio' ? <AudioSettingsPanel state={state} text={text} actions={actions} /> : null}
-          {category === 'Island' ? <IslandSettingsPanel state={state} text={text} actions={actions} /> : null}
-          {category === 'Remote' ? <RemoteSettingsPanel state={state} text={text} actions={actions} /> : null}
-          {category === 'App' ? <AppSettingsPanel state={state} text={text} actions={actions} /> : null}
-        </main>
-      ) : null}
+      <AnimatedPanel animationKey={`settings-${category ?? 'launcher'}`} className="settings-motion-panel" fixed panelRef={motionPanelRef}>
+        {!category ? (
+          <nav className="settings-launcher" aria-label={text.settings.launcherAria}>
+            {LAUNCHER_ITEMS.map((item) => {
+              const launcherText = text.settings.categories[item.category];
+              return (
+                <button key={item.category} className="settings-launcher__button" type="button" onClick={() => setCategory(item.category)}>
+                  <Card className="settings-launcher__item" pattern={item.pattern}>
+                    <span className="settings-launcher__icon">{item.icon}</span>
+                    <span className="settings-launcher__title">{launcherText.label}</span>
+                    <span className="settings-launcher__description">{launcherText.description}</span>
+                  </Card>
+                </button>
+              );
+            })}
+          </nav>
+        ) : null}
+        {category ? (
+          <main className="settings-panel" aria-label={`${categoryText?.label ?? category} ${text.settings.panelAriaSuffix}`}>
+            {category === 'Audio' ? <AudioSettingsPanel state={state} text={text} actions={actions} /> : null}
+            {category === 'Island' ? <IslandSettingsPanel state={state} text={text} actions={actions} /> : null}
+            {category === 'Remote' ? <RemoteSettingsPanel state={state} text={text} actions={actions} /> : null}
+            {category === 'App' ? <AppSettingsPanel state={state} text={text} actions={actions} onClose={onClose} /> : null}
+          </main>
+        ) : null}
+      </AnimatedPanel>
     </div>
   );
 }

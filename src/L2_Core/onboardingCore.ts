@@ -1,4 +1,5 @@
 import type { AppSettings, RuntimeState } from './types';
+import { createDefaultSettings } from '../L3_Business/settings/defaults';
 
 export function setOnboardingStep(runtime: RuntimeState, step: NonNullable<RuntimeState['onboardingStep']>): RuntimeState {
   return {
@@ -7,14 +8,9 @@ export function setOnboardingStep(runtime: RuntimeState, step: NonNullable<Runti
   };
 }
 
-export function skipWithDefaults(settings: AppSettings, runtime: RuntimeState): { settings: AppSettings; runtime: RuntimeState } {
+export function skipWithDefaults(runtime: RuntimeState, defaults: AppSettings = createDefaultSettings()): { settings: AppSettings; runtime: RuntimeState } {
   return {
-    settings: {
-      ...settings,
-      language: 'en',
-      bgmVersion: 'New Horizons (Switch 2021)',
-      townTune: { url: null, title: null, notes: [] },
-    },
+    settings: defaults,
     runtime: {
       ...runtime,
       onboardingStep: 'audioLoading',

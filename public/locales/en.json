@@ -3,18 +3,16 @@
     "loadingAria": "Loading application"
   },
   "common": {
-    "appName": "Animal Crossing Player",
     "settings": "Settings",
     "home": "Home",
     "back": "Back",
     "skip": "Skip",
-    "next": "Next",
     "start": "Start",
     "clear": "Clear",
+    "close": "Close",
     "preview": "Preview",
+    "stop": "Stop",
     "upload": "Upload",
-    "refresh": "Refresh",
-    "cancel": "Cancel",
     "continue": "Continue",
     "townTuneNotes": "Town tune notes"
   },
@@ -32,8 +30,28 @@
     },
     "locationLabels": {
       "Fallback": "Fallback",
-      "Manual": "Manual"
+      "Manual": "Manual",
+      "Local": "Local"
     }
+  },
+  "errors": {
+    "Only NookNet tune URLs are supported.": "Only NookNet tune URLs are supported.",
+    "The URL must include a melody parameter.": "The URL must include a melody parameter.",
+    "Please paste a NookNet URL that includes melody=.": "Please paste a NookNet URL that includes melody=.",
+    "The melody must contain 16 notes.": "The melody must contain 16 notes.",
+    "Unsupported note token.": "Unsupported note token.",
+    "Town tune preview failed.": "Town tune preview failed.",
+    "MQTT connection failed.": "MQTT connection failed.",
+    "Audio manifest is not available.": "Audio manifest is not available.",
+    "Audio loading failed.": "Audio loading failed.",
+    "Browser blocked audio playback.": "Browser blocked audio playback.",
+    "Hourly bell failed.": "Hourly chime failed.",
+    "Hourly chime failed.": "Hourly chime failed.",
+    "Current BGM failed to load.": "Current BGM failed to load.",
+    "Web Audio is not available.": "Web Audio is not available.",
+    "Geolocation is not available.": "Geolocation is not available.",
+    "Geolocation failed.": "Geolocation failed.",
+    "Weather refresh failed.": "Weather refresh failed."
   },
   "onboarding": {
     "title": "Island setup",
@@ -66,8 +84,7 @@
     "body": "Click Enable audio to allow browser playback."
   },
   "startupAudio": {
-    "title": "Start island radio",
-    "loadingTitle": "Audio Loading"
+    "loadingTitle": "Loading audio"
   },
   "settings": {
     "modalAria": "Settings modal",
@@ -75,20 +92,20 @@
     "panelAriaSuffix": "settings",
     "categories": {
       "Audio": {
-        "label": "Audio",
+        "label": "Sound",
         "description": "Playback, town tune, audio cache"
       },
       "Island": {
-        "label": "Island",
+        "label": "Display",
         "description": "Weather, background, date and time"
       },
       "Remote": {
-        "label": "Remote",
-        "description": "MQTT connection and remote log"
+        "label": "Remote control",
+        "description": "MQTT connection and remote logs"
       },
       "App": {
-        "label": "App",
-        "description": "Language, display, maintenance"
+        "label": "System",
+        "description": "Language, maintenance"
       }
     },
     "sections": {
@@ -101,39 +118,36 @@
       "MQTT Connection": "MQTT Connection",
       "Remote Log": "Remote Log",
       "Language": "Language",
-      "Display": "Display",
-      "Maintenance & Debug": "Maintenance & Debug"
+      "Maintenance & Debug": "Maintenance & Test"
     },
     "audio": {
       "bgmVersion": "BGM version",
       "bgmVolume": "BGM volume",
       "townTuneVolume": "Town tune volume",
-      "hourlyFlow": "Hourly flow",
-      "preloadNextHour": "Preload next hour",
-      "fadeMs": "Fade ms",
+      "hourlyFlow": "Hourly chime",
       "nookNetUrl": "NookNet URL",
       "noTownTune": "No town tune configured.",
       "cacheAudio": "Cache audio",
-      "cacheCurrentSet": "Cache current set",
+      "cacheCurrentSet": "Cache current audio set",
       "clearAudioCache": "Clear audio cache",
-      "cacheHint": "Cache is optional. Playback falls back to network loading."
+      "reloadAudio": "Reload"
     },
     "island": {
-      "kind": "Kind",
+      "kind": "Background type",
       "solid": "Solid",
       "preset": "Preset",
-      "uploaded": "Uploaded",
-      "solidColor": "Solid color",
+      "uploaded": "Uploaded image",
+      "solidColor": "Background color",
       "presetBackground": "Preset background {{id}}",
       "clearUploadedBackground": "Clear uploaded background",
       "readabilityOverlay": "Readability overlay",
-      "hourCycle": "Hour cycle",
+      "presetPan": "Background pan",
+      "hourCycle": "24-hour time",
       "lunarDate": "Lunar date",
       "mode": "Mode",
       "autoLocation": "Auto location",
-      "manual": "Manual",
-      "manualWeather": "Manual weather",
-      "manualLocationLabel": "Manual location label",
+      "manual": "Manual location",
+      "manualLocationLabel": "Location",
       "refreshWeather": "Refresh weather",
       "current": "Current"
     },
@@ -147,7 +161,7 @@
       "saveCredentials": "Save username/password",
       "saveCredentialsConfirm": "Username and password will be stored in browser local storage as plain text.",
       "baseTopic": "Base topic",
-      "retainState": "Retain state",
+      "retainState": "Retain state messages",
       "testConnection": "Test connection",
       "clearMqttConfig": "Clear MQTT config",
       "status": "Status",
@@ -161,24 +175,26 @@
       }
     },
     "appPanel": {
-      "motion": "Motion",
-      "motionFull": "Full",
-      "motionReduced": "Reduced",
-      "exportSettings": "Export settings JSON",
-      "importSettings": "Import settings JSON",
+      "exportSettings": "Export settings",
+      "importSettings": "Import settings",
       "clearLocalSettings": "Clear local settings",
+      "triggerHourlyChime": "Test hourly chime",
+      "settingsFiles": "Settings file",
+      "testTools": "Test tools",
+      "localData": "Local data",
+      "recentErrors": "Recent errors",
       "exportPasswordConfirm": "MQTT password will be exported as plain text.",
       "importPasswordConfirm": "Imported config may store MQTT password as plain text.",
       "clearLocalSettingsConfirm": "Clear local settings?",
       "noRecentErrors": "No recent errors.",
       "applicationLanguage": "Application language",
-      "onboardingCompleted": "Onboarding completed",
+      "enterOnboarding": "Enter first setup",
       "errorScopes": {
         "audio": "Audio",
         "weather": "Weather",
         "settings": "Settings",
         "mqtt": "MQTT",
-        "app": "App"
+        "app": "System"
       }
     }
   }

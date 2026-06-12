@@ -16,7 +16,7 @@ export async function storeUploadedBackground(file: File, now = new Date()): Pro
   return background;
 }
 
-export async function createUploadedBackgroundUrl(settings: AppSettings): Promise<string | null> {
+export async function createUploadedBackgroundUrl(settings: Pick<AppSettings, 'background'>): Promise<string | null> {
   const id = settings.background.uploadedImageId;
   if (!id) {
     return null;

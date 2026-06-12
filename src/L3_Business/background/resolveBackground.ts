@@ -1,9 +1,16 @@
 import type { BackgroundSettings } from '../../L4_Atom/types';
+import { getPublicAssetUrl } from '../../L4_Atom/utils/publicAssetUrl';
 
 export interface ResolvedBackground {
   kind: BackgroundSettings['kind'];
   cssBackground: string;
   label: string;
+}
+
+export function getPresetBackgroundUrl(id: string | null = '0'): string {
+  const presetId = id ?? '0';
+  const extension = ['3', '4', '6', '8'].includes(presetId) ? 'jpeg' : 'jpg';
+  return getPublicAssetUrl(`assets/backgroundPreset/${presetId}.${extension}`);
 }
 
 export function resolveBackground(settings: BackgroundSettings, uploadedUrl: string | null = null): ResolvedBackground {
@@ -24,10 +31,9 @@ export function resolveBackground(settings: BackgroundSettings, uploadedUrl: str
   }
 
   const id = settings.presetId ?? '0';
-  const extension = ['3', '4', '6', '8'].includes(id) ? 'jpeg' : 'jpg';
   return {
     kind: 'preset',
-    cssBackground: `url("/assets/backgroundPreset/${id}.${extension}") center / cover no-repeat`,
+    cssBackground: `url("${getPresetBackgroundUrl(id)}") center / cover no-repeat`,
     label: `Preset ${id}`,
   };
 }

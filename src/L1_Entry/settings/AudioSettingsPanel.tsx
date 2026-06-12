@@ -18,6 +18,10 @@ interface AudioSettingsPanelProps {
 export function AudioSettingsPanel({ subPage, state, text, actions }: AudioSettingsPanelProps) {
   const settings = state.settings;
   const labels = text.settings.audio;
+  const bgmReloadNeeded =
+    subPage === 'Playback' &&
+    state.runtime.audio.currentTrack !== null &&
+    state.runtime.audio.currentTrack.version !== settings.bgmVersion;
 
   if (!subPage) {
     return (
@@ -30,6 +34,8 @@ export function AudioSettingsPanel({ subPage, state, text, actions }: AudioSetti
   }
 
   if (subPage === 'Town Tune') {
+    const previewPlaying = state.runtime.audio.townTunePreviewStatus === 'playing';
+
     return (
       <Card className="settings-section" pattern="default">
         <GameHeading level={3} tone="section">{text.settings.sections[subPage]}</GameHeading>
@@ -48,10 +54,15 @@ export function AudioSettingsPanel({ subPage, state, text, actions }: AudioSetti
         <p className="muted">{settings.townTune.title ?? labels.noTownTune}</p>
         <NotePreview notes={settings.townTune.notes} ariaLabel={text.common.townTuneNotes} />
         <div className="panel-actions">
-          <Button icon={<AppIcon name="music" size={16} />} disabled={settings.townTune.notes.length === 0} onClick={() => void actions.previewTownTune()}>
-            {text.common.preview}
+          <Button
+            icon={<AppIcon name={previewPlaying ? 'clear' : 'music'} size={16} />}
+            type="primary"
+            disabled={settings.townTune.notes.length === 0}
+            onClick={() => void actions.previewTownTune()}
+          >
+            {previewPlaying ? text.common.stop : text.common.preview}
           </Button>
-          <Button icon={<AppIcon name="clear" size={16} />} disabled={settings.townTune.notes.length === 0} onClick={actions.clearTownTune}>
+          <Button icon={<AppIcon name="clear" size={16} />} type="primary" danger disabled={settings.townTune.notes.length === 0} onClick={actions.clearTownTune}>
             {text.common.clear}
           </Button>
         </div>
@@ -71,14 +82,13 @@ export function AudioSettingsPanel({ subPage, state, text, actions }: AudioSetti
           />
         </label>
         <div className="panel-actions">
-          <Button icon={<AppIcon name="cache" size={16} />} onClick={() => void actions.prepareAudio()}>
+          <Button icon={<AppIcon name="cache" size={16} />} type="primary" loading={state.runtime.audio.status === 'loading'} onClick={() => void actions.prepareAudio()}>
             {labels.cacheCurrentSet}
           </Button>
-          <Button icon={<AppIcon name="clear" size={16} />} danger onClick={() => void actions.clearAudioCache()}>
+          <Button icon={<AppIcon name="clear" size={16} />} type="primary" danger onClick={() => void actions.clearAudioCache()}>
             {labels.clearAudioCache}
           </Button>
         </div>
-        <p className="muted">{labels.cacheHint}</p>
       </Card>
     );
   }
@@ -94,6 +104,19 @@ export function AudioSettingsPanel({ subPage, state, text, actions }: AudioSetti
           onChange={(value) => actions.setBgmVersion(value as BgmVersion)}
         />
       </div>
+      {bgmReloadNeeded ? (
+        <div className="panel-actions">
+          <Button
+            icon={<AppIcon name="cache" size={16} />}
+            type="primary"
+            loading={state.runtime.audio.status === 'loading'}
+            disabled={state.runtime.audio.status === 'loading'}
+            onClick={() => void actions.reloadAudio()}
+          >
+            {labels.reloadAudio}
+          </Button>
+        </div>
+      ) : null}
       <label className="range-row">
         <span>{labels.bgmVolume}</span>
         <input
@@ -127,25 +150,6 @@ export function AudioSettingsPanel({ subPage, state, text, actions }: AudioSetti
           onChange={(hourlyFlowEnabled) => actions.updateSettings((current) => ({ ...current, audio: { ...current.audio, hourlyFlowEnabled } }))}
         />
       </label>
-      <label className="range-row">
-        <span>{labels.preloadNextHour}</span>
-        <Switch
-          checked={settings.audio.preloadNextHour}
-          onChange={(preloadNextHour) => actions.updateSettings((current) => ({ ...current, audio: { ...current.audio, preloadNextHour } }))}
-        />
-      </label>
-      <div className="field-row">
-        <label htmlFor="fade-ms">{labels.fadeMs}</label>
-        <Input
-          id="fade-ms"
-          type="number"
-          min={0}
-          value={settings.audio.fadeMs}
-          onChange={(event) =>
-            actions.updateSettings((current) => ({ ...current, audio: { ...current.audio, fadeMs: Number(event.target.value) } }))
-          }
-        />
-      </div>
     </Card>
   );
 }

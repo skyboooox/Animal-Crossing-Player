@@ -5,6 +5,7 @@ import { AudioLoadingStep } from '../../src/L1_Entry/onboarding/AudioLoadingStep
 
 const failedAudio: AudioRuntimeState = {
   status: 'error',
+  townTunePreviewStatus: 'idle',
   currentTrack: null,
   nextTrack: null,
   loadProgress: {
@@ -18,6 +19,7 @@ const failedAudio: AudioRuntimeState = {
 
 const readyAudio: AudioRuntimeState = {
   status: 'ready',
+  townTunePreviewStatus: 'idle',
   currentTrack: null,
   nextTrack: null,
   loadProgress: {

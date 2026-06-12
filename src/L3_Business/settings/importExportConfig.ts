@@ -25,7 +25,6 @@ export function normalizeSettings(input: unknown, defaults = createDefaultSettin
   const townTune = isRecord(input.townTune) ? input.townTune : {};
   const time = isRecord(input.time) ? input.time : {};
   const background = isRecord(input.background) ? input.background : {};
-  const display = isRecord(input.display) ? input.display : {};
   const mqtt = isRecord(input.mqtt) ? input.mqtt : {};
 
   const next: AppSettings = {
@@ -46,7 +45,7 @@ export function normalizeSettings(input: unknown, defaults = createDefaultSettin
       bgmVolume: clamp01(audio.bgmVolume, defaults.audio.bgmVolume),
       townTuneVolume: clamp01(audio.townTuneVolume, defaults.audio.townTuneVolume),
       hourlyFlowEnabled: typeof audio.hourlyFlowEnabled === 'boolean' ? audio.hourlyFlowEnabled : defaults.audio.hourlyFlowEnabled,
-      preloadNextHour: typeof audio.preloadNextHour === 'boolean' ? audio.preloadNextHour : defaults.audio.preloadNextHour,
+      preloadNextHour: true,
       cacheEnabled: typeof audio.cacheEnabled === 'boolean' ? audio.cacheEnabled : defaults.audio.cacheEnabled,
       fadeMs: typeof audio.fadeMs === 'number' ? Math.max(0, Math.floor(audio.fadeMs)) : defaults.audio.fadeMs,
     },
@@ -65,9 +64,7 @@ export function normalizeSettings(input: unknown, defaults = createDefaultSettin
       presetId: typeof background.presetId === 'string' ? background.presetId : defaults.background.presetId,
       uploadedImageId: typeof background.uploadedImageId === 'string' ? background.uploadedImageId : null,
       readabilityOverlay: typeof background.readabilityOverlay === 'boolean' ? background.readabilityOverlay : defaults.background.readabilityOverlay,
-    },
-    display: {
-      motion: display.motion === 'reduced' ? 'reduced' : 'full',
+      presetPanEnabled: typeof background.presetPanEnabled === 'boolean' ? background.presetPanEnabled : defaults.background.presetPanEnabled,
     },
     mqtt: {
       ...defaults.mqtt,

@@ -11,6 +11,7 @@ export function createInitialRuntime(settings: AppSettings, now = new Date()): R
     startupAudioPromptOpen: settings.onboardingCompleted,
     audio: {
       status: 'idle',
+      townTunePreviewStatus: 'idle',
       currentTrack: null,
       nextTrack: null,
       loadProgress: null,
@@ -96,6 +97,7 @@ export function fallbackRuntime(now = new Date()): RuntimeState {
     startupAudioPromptOpen: false,
     audio: {
       status: 'idle',
+      townTunePreviewStatus: 'idle',
       currentTrack: null,
       nextTrack: null,
       loadProgress: null,

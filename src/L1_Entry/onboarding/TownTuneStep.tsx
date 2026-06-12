@@ -14,18 +14,20 @@ interface TownTuneStepProps {
     noTune: string;
     notesAria: string;
     preview: string;
+    stop: string;
     clear: string;
     skip: string;
   };
+  previewPlaying: boolean;
   onUrlChange: (url: string) => void;
   onPreview: () => Promise<void>;
   onClear: () => void;
   onSkip: () => void;
 }
 
-export function TownTuneStep({ value, url, error, labels, onUrlChange, onPreview, onClear, onSkip }: TownTuneStepProps) {
+export function TownTuneStep({ value, url, error, labels, previewPlaying, onUrlChange, onPreview, onClear, onSkip }: TownTuneStepProps) {
   return (
-    <div className="onboarding-body">
+    <div className="onboarding-body onboarding-body--town-tune">
       <GameHeading>{labels.title}</GameHeading>
       <div className="field-row">
         <label htmlFor="town-tune-url">{labels.url}</label>
@@ -35,13 +37,13 @@ export function TownTuneStep({ value, url, error, labels, onUrlChange, onPreview
       <NotePreview notes={value.notes} ariaLabel={labels.notesAria} />
       {error ? <p className="error-text">{error}</p> : null}
       <div className="step-actions">
-        <Button icon={<AppIcon name="music" size={16} />} disabled={value.notes.length === 0} onClick={() => void onPreview()}>
-          {labels.preview}
+        <Button icon={<AppIcon name={previewPlaying ? 'clear' : 'music'} size={16} />} type="primary" disabled={value.notes.length === 0} onClick={() => void onPreview()}>
+          {previewPlaying ? labels.stop : labels.preview}
         </Button>
-        <Button icon={<AppIcon name="clear" size={16} />} disabled={value.notes.length === 0} onClick={onClear}>
+        <Button icon={<AppIcon name="clear" size={16} />} type="primary" danger disabled={value.notes.length === 0} onClick={onClear}>
           {labels.clear}
         </Button>
-        <Button onClick={onSkip}>{labels.skip}</Button>
+        <Button ghost type="primary" onClick={onSkip}>{labels.skip}</Button>
       </div>
     </div>
   );

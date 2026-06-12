@@ -4,6 +4,7 @@ import { buildRemoteStateMessage, handleRemoteCommand, validateMqttSettings } fr
 import { createDefaultSettings } from '../../src/L3_Business/settings/defaults';
 import { exportConfig, importConfig, normalizeSettings } from '../../src/L3_Business/settings/importExportConfig';
 import { sanitizeSettingsForStorage } from '../../src/L3_Business/settings/sanitizeSensitiveConfig';
+import { buildHomeAssistantDiscoveryMessages, buildMqttTopics } from '../../src/L4_Atom/mqtt/mqttJson';
 import { fixtureManifest } from '../helpers/assetManifest';
 
 describe('settings and remote control', () => {
@@ -18,8 +19,9 @@ describe('settings and remote control', () => {
   });
 
   it('normalizes imported settings and keeps generated client id', () => {
-    const settings = normalizeSettings({ audio: { bgmVolume: 2 }, mqtt: { clientId: 'acp-test' } }, createDefaultSettings());
+    const settings = normalizeSettings({ audio: { bgmVolume: 2, preloadNextHour: false }, mqtt: { clientId: 'acp-test' } }, createDefaultSettings());
     expect(settings.audio.bgmVolume).toBe(1);
+    expect(settings.audio.preloadNextHour).toBe(true);
     expect(settings.mqtt.clientId).toBe('acp-test');
   });
 
@@ -50,11 +52,71 @@ describe('settings and remote control', () => {
     expect(result.state.settings.audio.bgmVolume).toBe(0.5);
   });
 
+  it('treats remote manual weather as a manual location', () => {
+    const state = createInitialAppState(createDefaultSettings(), fixtureManifest);
+    const result = handleRemoteCommand(state, {
+      version: 1,
+      id: 'cmd-weather-1',
+      type: 'setWeather',
+      mode: 'manual',
+      locationLabel: 'Hong Kong',
+    });
+
+    expect(result.ack.status).toBe('accepted');
+    expect(result.effect).toBe('refreshWeather');
+    expect(result.state.settings.weather.mode).toBe('manual');
+    expect(result.state.settings.weather.manualLocationLabel).toBe('Hong Kong');
+    expect(result.state.settings.weather.manualValue).toBe('Sunny');
+  });
+
+  it('rejects remote manual weather without a location', () => {
+    const state = createInitialAppState(createDefaultSettings(), fixtureManifest);
+    const result = handleRemoteCommand(state, {
+      version: 1,
+      id: 'cmd-weather-2',
+      type: 'setWeather',
+      mode: 'manual',
+      weather: 'Rainy',
+    });
+
+    expect(result.ack.status).toBe('rejected');
+    expect(result.ack.message).toContain('location');
+  });
+
   it('publishes state without password fields', () => {
     const settings = createDefaultSettings();
     settings.mqtt.password = 'secret';
     const state = createInitialAppState(settings, fixtureManifest);
     const message = buildRemoteStateMessage(state);
     expect(JSON.stringify(message)).not.toContain('secret');
+  });
+
+  it('builds Home Assistant MQTT discovery entities', () => {
+    const settings = createDefaultSettings();
+    settings.mqtt.clientId = 'acp-test';
+    const topics = buildMqttTopics(settings.mqtt.baseTopic, settings.mqtt.clientId);
+    const messages = buildHomeAssistantDiscoveryMessages(settings.mqtt);
+    const byTopic = new Map(messages.map((message) => [message.topic, JSON.parse(message.payload) as Record<string, unknown>]));
+
+    expect(topics.availability).toBe('ac-player/v1/acp-test/availability');
+    expect(messages).toHaveLength(10);
+    expect(byTopic.has('homeassistant/binary_sensor/acp-test_playing/config')).toBe(true);
+
+    const bgmVolume = byTopic.get('homeassistant/number/acp-test_bgm_volume/config');
+    expect(bgmVolume?.state_topic).toBe('ac-player/v1/acp-test/state');
+    expect(bgmVolume?.command_topic).toBe('ac-player/v1/acp-test/command');
+    expect(bgmVolume?.availability_topic).toBe('ac-player/v1/acp-test/availability');
+    expect(String(bgmVolume?.command_template)).toContain('"type":"setVolume"');
+
+    const bgmVersion = byTopic.get('homeassistant/select/acp-test_bgm_version/config');
+    expect(bgmVersion?.command_topic).toBe('ac-player/v1/acp-test/command');
+    expect(bgmVersion?.options).toContain('New Horizons (Switch 2021)');
+
+    const requestState = byTopic.get('homeassistant/button/acp-test_request_state/config');
+    expect(requestState?.payload_press).toContain('"type":"requestState"');
+    expect(requestState?.device).toMatchObject({
+      identifiers: ['animal_crossing_player_acp-test'],
+      name: 'Animal Crossing Player',
+    });
   });
 });

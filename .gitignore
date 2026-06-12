@@ -146,3 +146,4 @@ package-lock.json
 # Playwright
 test-results/
 playwright-report/
+.DS_Store

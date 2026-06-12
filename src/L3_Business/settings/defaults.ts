@@ -23,7 +23,7 @@ export function createDefaultSettings(): AppSettings {
     weather: {
       mode: 'auto',
       manualValue: 'Sunny',
-      manualLocationLabel: 'Manual',
+      manualLocationLabel: '',
       lastAuto: null,
     },
     audio: {
@@ -32,7 +32,7 @@ export function createDefaultSettings(): AppSettings {
       hourlyFlowEnabled: true,
       preloadNextHour: true,
       cacheEnabled: true,
-      fadeMs: 1800,
+      fadeMs: 1500,
     },
     townTune: {
       url: null,
@@ -49,9 +49,7 @@ export function createDefaultSettings(): AppSettings {
       presetId: '0',
       uploadedImageId: null,
       readabilityOverlay: true,
-    },
-    display: {
-      motion: 'full',
+      presetPanEnabled: true,
     },
     mqtt: {
       enabled: false,
@@ -70,15 +68,18 @@ export function createDefaultSettings(): AppSettings {
 
 export function getEffectiveWeather(settings: AppSettings, now = new Date()): WeatherSnapshot {
   if (settings.weather.mode === 'manual') {
+    const fallback = createFallbackWeatherSnapshot(now);
+    const last = settings.weather.lastAuto;
     return {
-      value: settings.weather.manualValue,
-      locationLabel: settings.weather.manualLocationLabel || 'Manual',
-      temperature: null,
-      temperatureMax: null,
-      temperatureMin: null,
-      weatherCode: null,
-      updatedAt: now.toISOString(),
-      source: 'manual',
+      ...fallback,
+      locationLabel: last?.locationLabel ?? (settings.weather.manualLocationLabel || 'Manual'),
+      value: last?.value ?? fallback.value,
+      temperature: last?.temperature ?? fallback.temperature,
+      temperatureMax: last?.temperatureMax ?? fallback.temperatureMax,
+      temperatureMin: last?.temperatureMin ?? fallback.temperatureMin,
+      weatherCode: last?.weatherCode ?? fallback.weatherCode,
+      updatedAt: last?.updatedAt ?? fallback.updatedAt,
+      source: last?.source ?? fallback.source,
     };
   }
 

@@ -13,9 +13,10 @@ interface AudioLoadingStepProps {
     starting: string;
     ready: string;
   };
+  formatErrorMessage?: (message: string) => string;
 }
 
-export function AudioLoadingStep({ audio, onPrepare, labels }: AudioLoadingStepProps) {
+export function AudioLoadingStep({ audio, onPrepare, labels, formatErrorMessage }: AudioLoadingStepProps) {
   useEffect(() => {
     if (audio.status === 'idle') {
       void onPrepare();
@@ -36,7 +37,13 @@ export function AudioLoadingStep({ audio, onPrepare, labels }: AudioLoadingStepP
 
   const progress = audio.loadProgress ?? { done: 0, total: 2, label: labels.waiting, status: 'checkingCache' as const };
   const progressLabel =
-    progress.status === 'ready' ? labels.ready : progress.status === 'checkingCache' && progress.label === 'Starting' ? labels.starting : progress.label;
+    progress.status === 'ready'
+      ? labels.ready
+      : progress.status === 'checkingCache' && progress.label === 'Starting'
+        ? labels.starting
+        : progress.status === 'failed' && formatErrorMessage
+          ? formatErrorMessage(progress.label)
+          : progress.label;
 
   return (
     <div className="onboarding-body">

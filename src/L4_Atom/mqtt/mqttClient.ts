@@ -1,6 +1,7 @@
 import mqtt, { type MqttClient } from 'mqtt';
 import type { MqttSettings } from '../types';
 import { isWebSocketUrl } from '../utils/url';
+import { buildMqttTopics } from './mqttJson';
 
 export interface BrowserMqttClient {
   connect(): Promise<void>;
@@ -16,6 +17,7 @@ export function createBrowserMqttClient(settings: MqttSettings): BrowserMqttClie
 
   let client: MqttClient | null = null;
   const subscriptions = new Map<string, (payload: Uint8Array) => void>();
+  const topics = buildMqttTopics(settings.baseTopic, settings.clientId);
 
   return {
     connect() {
@@ -25,6 +27,12 @@ export function createBrowserMqttClient(settings: MqttSettings): BrowserMqttClie
           username: settings.username || undefined,
           password: settings.password || undefined,
           reconnectPeriod: 3000,
+          will: {
+            topic: topics.availability,
+            payload: 'offline',
+            qos: settings.qos,
+            retain: true,
+          },
         });
 
         client.on('connect', () => resolve());

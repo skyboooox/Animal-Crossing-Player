@@ -1,7 +1,6 @@
 import type { AppState } from '../../L2_Core/types';
-import { AppIcon } from '../../L4_Atom/ui/AppIcon';
 import { Button, Modal } from '../../L4_Atom/ui/animalIsland';
-import type { UiText } from '../i18n';
+import { formatErrorMessage, type UiText } from '../i18n';
 import type { AppActions } from '../providers';
 import { AudioLoadingStep } from '../onboarding/AudioLoadingStep';
 
@@ -19,13 +18,12 @@ export function StartupAudioModal({ open, state, text, actions }: StartupAudioMo
     <Modal
       open={open}
       className="app-modal app-modal--startup-audio"
-      title={text.startupAudio.title}
       width="min(640px, calc(100vw - 24px))"
       maskClosable={false}
       typewriter={false}
       footer={
         <div className="modal-actions">
-          <Button icon={<AppIcon name="volume" size={16} />} type="primary" disabled={!audioReady} onClick={() => void actions.startAudio()}>
+          <Button type="primary" disabled={!audioReady} loading={state.runtime.audio.status === 'loading'} onClick={() => void actions.startAudio()}>
             {text.common.start}
           </Button>
         </div>
@@ -36,6 +34,7 @@ export function StartupAudioModal({ open, state, text, actions }: StartupAudioMo
           audio={state.runtime.audio}
           onPrepare={actions.prepareAudio}
           labels={{ ...text.onboarding.audio, title: text.startupAudio.loadingTitle }}
+          formatErrorMessage={(message) => formatErrorMessage(text, message)}
         />
       </div>
     </Modal>

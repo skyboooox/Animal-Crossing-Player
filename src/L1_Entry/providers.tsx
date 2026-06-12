@@ -1,4 +1,4 @@
-import type { AppState, AppSettings, BgmVersion, IslandWeather, Language, LoadProgress } from '../L2_Core/types';
+import type { AppState, AppSettings, BgmVersion, Language, LoadProgress } from '../L2_Core/types';
 import { AudioCore } from '../L2_Core/audioCore';
 import { createInitialAppState } from '../L2_Core/appState';
 import { completeOnboarding, setOnboardingStep, skipWithDefaults } from '../L2_Core/onboardingCore';
@@ -6,28 +6,51 @@ import { buildExportConfig, clearSettings, importSettingsFromJson, loadSettings,
 import { bootstrapApp } from '../L2_Core/startupCore';
 import { refreshWeather as refreshWeatherCore } from '../L2_Core/weatherCore';
 import { parseNookNetUrl } from '../L3_Business/townTune/parseNookNetUrl';
-import { createDefaultSettings } from '../L3_Business/settings/defaults';
+import { createDefaultSettings, createFallbackWeatherSnapshot } from '../L3_Business/settings/defaults';
 import { loadAudioManifest } from '../L4_Atom/assetManifest/loadAudioManifest';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { clearUploadedBackground as clearUploadedBackgroundCore, storeUploadedBackground } from '../L2_Core/backgroundCore';
 import { buildRemoteStateMessage, handleRemoteCommand, validateMqttSettings } from '../L2_Core/remoteControlCore';
 import { createBrowserMqttClient } from '../L4_Atom/mqtt/mqttClient';
-import { buildMqttTopics, isRemoteCommand, parseMqttJson, stringifyMqttJson } from '../L4_Atom/mqtt/mqttJson';
-import { AppContext } from './appContext';
+import type { BrowserMqttClient } from '../L4_Atom/mqtt/mqttClient';
+import { buildHomeAssistantDiscoveryMessages, buildMqttTopics, isRemoteCommand, parseMqttJson, stringifyMqttJson } from '../L4_Atom/mqtt/mqttJson';
+import { AppActionsContext, AppStateContext } from './appContext';
+
+const WEATHER_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+
+function publishHomeAssistantDiscovery(client: BrowserMqttClient, mqtt: AppSettings['mqtt']) {
+  const topics = buildMqttTopics(mqtt.baseTopic, mqtt.clientId);
+  client.publish(topics.availability, 'online', { qos: mqtt.qos, retain: true });
+  for (const message of buildHomeAssistantDiscoveryMessages(mqtt)) {
+    client.publish(message.topic, message.payload, { qos: mqtt.qos, retain: true });
+  }
+}
+
+function publishMqttState(client: BrowserMqttClient, state: AppState) {
+  const topics = buildMqttTopics(state.settings.mqtt.baseTopic, state.settings.mqtt.clientId);
+  client.publish(topics.state, stringifyMqttJson(buildRemoteStateMessage(state)), {
+    qos: state.settings.mqtt.qos,
+    retain: state.settings.mqtt.retainState,
+  });
+}
 
 export interface AppActions {
   setLanguage(language: Language): void;
   setBgmVersion(version: BgmVersion): void;
   setOnboardingStep(step: NonNullable<AppState['runtime']['onboardingStep']>): void;
+  enterOnboarding(): void;
   skipOnboarding(): void;
   parseTownTuneUrl(url: string): string | null;
   clearTownTune(): void;
   prepareAudio(): Promise<void>;
+  reloadAudio(): Promise<void>;
   startAudio(): Promise<void>;
   previewTownTune(): Promise<void>;
+  stopTownTunePreview(): void;
+  triggerHourlyChime(): Promise<void>;
   updateSettings(updater: (settings: AppSettings) => AppSettings): void;
   refreshWeather(): Promise<void>;
-  setManualWeather(weather: IslandWeather, locationLabel: string): void;
+  setManualWeatherLocation(locationLabel: string): void;
   uploadBackground(file: File): Promise<void>;
   clearUploadedBackground(): Promise<void>;
   clearAudioCache(): Promise<void>;
@@ -43,16 +66,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const audioCore = useRef(new AudioCore());
   const stateRef = useRef<AppState | null>(null);
   const lastHourRef = useRef(new Date().getHours());
-  const autoWeatherStartedRef = useRef(false);
+  const townTunePreviewRequestRef = useRef(0);
   const appSettings = state?.settings;
   const mqttSettings = state?.settings.mqtt;
   const audioStatus = state?.runtime.audio.status;
   const hourlyFlowEnabled = state?.settings.audio.hourlyFlowEnabled;
   const manifest = state?.manifest;
+  const bgmVolume = appSettings?.audio.bgmVolume;
+  const townTuneVolume = appSettings?.audio.townTuneVolume;
+  const onboardingCompleted = appSettings?.onboardingCompleted;
+  const weatherMode = appSettings?.weather.mode;
+  const manualLocation = appSettings?.weather.manualLocationLabel;
+  const language = appSettings?.language;
+
+  stateRef.current = state;
+
+  const getCurrentState = useCallback(() => stateRef.current, []);
 
   useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+    if (bgmVolume === undefined || townTuneVolume === undefined) {
+      return;
+    }
+
+    audioCore.current.setBgmVolume(bgmVolume);
+    audioCore.current.setTownTuneVolume(townTuneVolume);
+  }, [bgmVolume, townTuneVolume]);
 
   const updateSettings = useCallback((updater: (settings: AppSettings) => AppSettings) => {
     setState((current) => {
@@ -60,29 +98,109 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return current;
       }
       const settings = updater(current.settings);
+      const weatherSettingsChanged =
+        settings.weather.mode !== current.settings.weather.mode ||
+        settings.weather.manualLocationLabel !== current.settings.weather.manualLocationLabel;
+      const shouldResetManualWeather = settings.weather.mode === 'manual' && weatherSettingsChanged;
+      const manualFallback = shouldResetManualWeather
+        ? { ...createFallbackWeatherSnapshot(), locationLabel: settings.weather.manualLocationLabel || 'Manual' }
+        : null;
       saveSettings(settings);
       return {
         ...current,
         settings,
         runtime: {
           ...current.runtime,
-          weather:
-            settings.weather.mode === 'manual'
-              ? {
-                  value: settings.weather.manualValue,
-                  locationLabel: settings.weather.manualLocationLabel,
-                  temperature: null,
-                  temperatureMax: null,
-                  temperatureMin: null,
-                  weatherCode: null,
-                  updatedAt: new Date().toISOString(),
-                  source: 'manual',
-                }
-              : current.runtime.weather,
+          weather: manualFallback ?? current.runtime.weather,
         },
       };
     });
   }, []);
+
+  const refreshWeatherState = useCallback(async (settingsOverride?: AppSettings) => {
+    const current = getCurrentState();
+    const settings = settingsOverride ?? current?.settings;
+    if (!settings) {
+      return null;
+    }
+
+    const result = await refreshWeatherCore(settings);
+    saveSettings(result.settings);
+    setState((existing) =>
+      existing
+        ? {
+            ...existing,
+            settings: result.settings,
+            runtime: {
+              ...existing.runtime,
+              weather: result.snapshot,
+              errors: result.error
+                ? [{ id: `error-${Date.now()}`, scope: 'weather', message: result.error, createdAt: new Date().toISOString() }, ...existing.runtime.errors]
+                : existing.runtime.errors,
+            },
+          }
+        : existing,
+    );
+    return result;
+  }, [getCurrentState]);
+
+  const setTownTunePreviewStatus = useCallback((status: AppState['runtime']['audio']['townTunePreviewStatus']) => {
+    setState((current) =>
+      current
+        ? {
+            ...current,
+            runtime: {
+              ...current.runtime,
+              audio: {
+                ...current.runtime.audio,
+                townTunePreviewStatus: status,
+              },
+            },
+          }
+        : current,
+    );
+  }, []);
+
+  const stopTownTunePreview = useCallback(() => {
+    townTunePreviewRequestRef.current += 1;
+    audioCore.current.stopTownTunePreview();
+    setTownTunePreviewStatus('idle');
+  }, [setTownTunePreviewStatus]);
+
+  const runTownTunePreview = useCallback(
+    async (notes: AppSettings['townTune']['notes'], volume: number) => {
+      if (notes.length === 0) {
+        return;
+      }
+
+      const requestId = townTunePreviewRequestRef.current + 1;
+      townTunePreviewRequestRef.current = requestId;
+      setTownTunePreviewStatus('playing');
+
+      try {
+        await audioCore.current.previewTownTune(notes, volume);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Town tune preview failed.';
+        setState((current) =>
+          current
+            ? {
+                ...current,
+                runtime: {
+                  ...current.runtime,
+                  audio: { ...current.runtime.audio, townTunePreviewStatus: 'idle' },
+                  errors: [{ id: `error-${Date.now()}`, scope: 'audio', message, createdAt: new Date().toISOString() }, ...current.runtime.errors],
+                },
+              }
+            : current,
+        );
+      } finally {
+        if (townTunePreviewRequestRef.current === requestId) {
+          setTownTunePreviewStatus('idle');
+        }
+      }
+    },
+    [setTownTunePreviewStatus],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -200,7 +318,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             audioCore.current.setBgmVolume(parsed.value);
           }
           if (result.effect === 'previewTownTune') {
-            void audioCore.current.previewTownTune(nextState.settings.townTune.notes, nextState.settings.audio.townTuneVolume);
+            void runTownTunePreview(nextState.settings.townTune.notes, nextState.settings.audio.townTuneVolume);
           }
           if (result.effect === 'triggerHourlyFlow' && nextState.manifest) {
             const hour = new Date().getHours();
@@ -221,31 +339,65 @@ export function AppProvider({ children }: { children: ReactNode }) {
                           },
                         },
                       }
-                    : existing,
+                  : existing,
                 );
               });
           }
 
           client.publish(topics.ack, stringifyMqttJson(result.ack), { qos: nextState.settings.mqtt.qos, retain: false });
-          if (result.shouldPublishState) {
-            client.publish(topics.state, stringifyMqttJson(buildRemoteStateMessage(nextState)), {
-              qos: nextState.settings.mqtt.qos,
-              retain: nextState.settings.mqtt.retainState,
+          if (result.effect === 'refreshWeather') {
+            void refreshWeatherCore(nextState.settings).then((weatherResult) => {
+              const current = stateRef.current;
+              if (!current) {
+                return;
+              }
+              const refreshedState: AppState = {
+                ...current,
+                settings: weatherResult.settings,
+                runtime: {
+                  ...current.runtime,
+                  weather: weatherResult.snapshot,
+                  errors: weatherResult.error
+                    ? [{ id: `error-${Date.now()}`, scope: 'weather', message: weatherResult.error, createdAt: new Date().toISOString() }, ...current.runtime.errors]
+                    : current.runtime.errors,
+                },
+              };
+              stateRef.current = refreshedState;
+              setState(refreshedState);
+              saveSettings(refreshedState.settings);
+              if (result.shouldPublishState) {
+                publishMqttState(client, refreshedState);
+              }
             });
+          } else if (result.shouldPublishState) {
+            publishMqttState(client, nextState);
           }
         });
 
-        setState((current) =>
-          current
-            ? {
-                ...current,
-                runtime: {
-                  ...current.runtime,
-                  mqtt: { status: 'connected', lastError: null, connectedAt: new Date().toISOString() },
-                },
-              }
-            : current,
-        );
+        await client.subscribe(topics.homeAssistantStatus, (payload) => {
+          const status = new TextDecoder().decode(payload).trim();
+          const current = stateRef.current;
+          if (status === 'online' && current?.settings.mqtt.enabled) {
+            publishHomeAssistantDiscovery(client, current.settings.mqtt);
+            publishMqttState(client, current);
+          }
+        });
+
+        const current = stateRef.current;
+        if (!current) {
+          return;
+        }
+        const connectedState: AppState = {
+          ...current,
+          runtime: {
+            ...current.runtime,
+            mqtt: { status: 'connected', lastError: null, connectedAt: new Date().toISOString() },
+          },
+        };
+        stateRef.current = connectedState;
+        setState(connectedState);
+        publishHomeAssistantDiscovery(client, connectedState.settings.mqtt);
+        publishMqttState(client, connectedState);
       })
       .catch((error) => {
         if (disposed) {
@@ -267,40 +419,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     return () => {
       disposed = true;
+      client.publish(topics.availability, 'offline', { qos: mqttSettings.qos, retain: true });
       client.disconnect();
     };
-  }, [mqttSettings]);
+  }, [mqttSettings, runTownTunePreview]);
 
   useEffect(() => {
-    if (
-      !appSettings ||
-      autoWeatherStartedRef.current ||
-      !appSettings.onboardingCompleted ||
-      appSettings.weather.mode !== 'auto'
-    ) {
-      return;
+    const canRefreshWeather = () => {
+      const settings = stateRef.current?.settings;
+      return Boolean(
+        settings?.onboardingCompleted &&
+          (settings.weather.mode === 'auto' || settings.weather.manualLocationLabel.trim().length > 0),
+      );
+    };
+
+    if (!canRefreshWeather()) {
+      return undefined;
     }
 
-    autoWeatherStartedRef.current = true;
-    void refreshWeatherCore(appSettings).then((result) => {
-      saveSettings(result.settings);
-      setState((current) =>
-        current
-          ? {
-              ...current,
-              settings: result.settings,
-              runtime: {
-                ...current.runtime,
-                weather: result.snapshot,
-                errors: result.error
-                  ? [{ id: `error-${Date.now()}`, scope: 'weather', message: result.error, createdAt: new Date().toISOString() }, ...current.runtime.errors]
-                  : current.runtime.errors,
-              },
-            }
-          : current,
-      );
-    });
-  }, [appSettings]);
+    void refreshWeatherState();
+    const timer = window.setInterval(() => {
+      if (canRefreshWeather()) {
+        void refreshWeatherState();
+      }
+    }, WEATHER_REFRESH_INTERVAL_MS);
+
+    return () => window.clearInterval(timer);
+  }, [language, manualLocation, onboardingCompleted, refreshWeatherState, weatherMode]);
 
   useEffect(() => {
     if (audioStatus !== 'playing' || !manifest || !hourlyFlowEnabled) {
@@ -350,12 +495,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setOnboardingStep(step) {
         setState((current) => (current ? { ...current, runtime: setOnboardingStep(current.runtime, step) } : current));
       },
+      enterOnboarding() {
+        setState((current) => {
+          if (!current) {
+            return current;
+          }
+          const settings = { ...current.settings, onboardingCompleted: false };
+          saveSettings(settings);
+          return {
+            ...current,
+            settings,
+            runtime: {
+              ...current.runtime,
+              onboardingStep: 'language',
+              startupAudioPromptOpen: false,
+            },
+          };
+        });
+      },
       skipOnboarding() {
         setState((current) => {
           if (!current) {
             return current;
           }
-          const next = skipWithDefaults(current.settings, current.runtime);
+          const next = skipWithDefaults(current.runtime);
           saveSettings(next.settings);
           return { ...current, settings: next.settings, runtime: next.runtime };
         });
@@ -372,7 +535,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateSettings((settings) => ({ ...settings, townTune: { url: null, title: null, notes: [] } }));
       },
       async prepareAudio() {
-        const current = state;
+        const current = getCurrentState();
         if (!current?.manifest) {
           setState((existing) =>
             existing
@@ -458,8 +621,100 @@ export function AppProvider({ children }: { children: ReactNode }) {
           );
         }
       },
+      async reloadAudio() {
+        const current = getCurrentState();
+        if (!current?.manifest) {
+          setState((existing) =>
+            existing
+              ? {
+                  ...existing,
+                  runtime: {
+                    ...existing.runtime,
+                    audio: { ...existing.runtime.audio, status: 'error' },
+                    errors: [
+                      {
+                        id: `error-${Date.now()}`,
+                        scope: 'audio',
+                        message: 'Audio manifest is not available.',
+                        createdAt: new Date().toISOString(),
+                      },
+                      ...existing.runtime.errors,
+                    ],
+                  },
+                }
+              : existing,
+          );
+          return;
+        }
+
+        const hour = new Date().getHours();
+        const shouldRestart = current.runtime.audio.status === 'playing';
+        setState((existing) =>
+          existing
+            ? {
+                ...existing,
+                runtime: {
+                  ...existing.runtime,
+                  audio: { ...existing.runtime.audio, status: 'loading', loadProgress: { done: 0, total: 2, label: 'Starting', status: 'checkingCache' } },
+                },
+              }
+            : existing,
+        );
+
+        try {
+          const prepared = await audioCore.current.prepareInitialAudio(current.manifest, current.settings, current.runtime.weather.value, hour, (progress: LoadProgress) => {
+            setState((existing) =>
+              existing
+                ? {
+                    ...existing,
+                    runtime: {
+                      ...existing.runtime,
+                      audio: { ...existing.runtime.audio, status: 'loading', loadProgress: progress },
+                    },
+                  }
+                : existing,
+            );
+          });
+          const track = shouldRestart ? await audioCore.current.startPrepared(current.settings) : prepared.track;
+
+          setState((existing) =>
+            existing
+              ? {
+                  ...existing,
+                  runtime: {
+                    ...existing.runtime,
+                    audio: {
+                      ...existing.runtime.audio,
+                      status: shouldRestart ? 'playing' : 'ready',
+                      currentTrack: track,
+                      nextTrack: prepared.nextTrack,
+                      loadProgress: { done: 2, total: 2, label: 'Ready', status: 'ready' },
+                    },
+                  },
+                }
+              : existing,
+          );
+          if (shouldRestart) {
+            void audioCore.current.preloadNextHour(current.manifest, current.settings, current.runtime.weather.value, new Date().getHours());
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Audio loading failed.';
+          setState((existing) =>
+            existing
+              ? {
+                  ...existing,
+                  runtime: {
+                    ...existing.runtime,
+                    audio: { ...existing.runtime.audio, status: 'error', loadProgress: { done: 0, total: 2, label: message, status: 'failed' } },
+                    errors: [{ id: `error-${Date.now()}`, scope: 'audio', message, createdAt: new Date().toISOString() }, ...existing.runtime.errors],
+                  },
+                }
+              : existing,
+          );
+        }
+      },
       async startAudio() {
-        const current = state;
+        const current = getCurrentState();
         if (!current) {
           return;
         }
@@ -481,7 +736,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               },
             },
           });
-          if (current.manifest && next.settings.audio.preloadNextHour) {
+          if (current.manifest) {
             void audioCore.current.preloadNextHour(current.manifest, next.settings, current.runtime.weather.value, new Date().getHours());
           }
         } catch (error) {
@@ -501,38 +756,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       },
       async previewTownTune() {
-        if (state?.settings.townTune.notes.length) {
-          await audioCore.current.previewTownTune(state.settings.townTune.notes, state.settings.audio.townTuneVolume);
+        const current = getCurrentState();
+        if (!current?.settings.townTune.notes.length) {
+          return;
+        }
+
+        if (current.runtime.audio.townTunePreviewStatus === 'playing') {
+          stopTownTunePreview();
+          return;
+        }
+        await runTownTunePreview(current.settings.townTune.notes, current.settings.audio.townTuneVolume);
+      },
+      stopTownTunePreview,
+      async triggerHourlyChime() {
+        const current = getCurrentState();
+        if (!current) {
+          return;
+        }
+
+        try {
+          await audioCore.current.triggerHourlyChime(current.settings, new Date().getHours());
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Hourly chime failed.';
+          setState((existing) =>
+            existing
+              ? {
+                  ...existing,
+                  runtime: {
+                    ...existing.runtime,
+                    errors: [{ id: `error-${Date.now()}`, scope: 'audio', message, createdAt: new Date().toISOString() }, ...existing.runtime.errors],
+                  },
+                }
+              : existing,
+          );
         }
       },
       updateSettings,
       async refreshWeather() {
-        const current = state;
-        if (!current) {
-          return;
-        }
-        const result = await refreshWeatherCore(current.settings);
-        saveSettings(result.settings);
-        setState({
-          ...current,
-          settings: result.settings,
-          runtime: {
-            ...current.runtime,
-            weather: result.snapshot,
-            errors: result.error
-              ? [{ id: `error-${Date.now()}`, scope: 'weather', message: result.error, createdAt: new Date().toISOString() }, ...current.runtime.errors]
-              : current.runtime.errors,
-          },
-        });
+        await refreshWeatherState();
       },
-      setManualWeather(weather, locationLabel) {
+      setManualWeatherLocation(locationLabel) {
         updateSettings((settings) => ({
           ...settings,
           weather: {
             ...settings.weather,
             mode: 'manual',
-            manualValue: weather,
-            manualLocationLabel: locationLabel || 'Manual',
+            manualLocationLabel: locationLabel,
+            lastAuto: settings.weather.manualLocationLabel === locationLabel ? settings.weather.lastAuto : null,
           },
         }));
       },
@@ -548,7 +818,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }));
       },
       async clearUploadedBackground() {
-        const current = state;
+        const current = getCurrentState();
         if (!current) {
           return;
         }
@@ -560,10 +830,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await audioCore.current.clearAudioCache();
       },
       exportSettings() {
-        if (!state) {
+        const current = getCurrentState();
+        if (!current) {
           return '';
         }
-        return JSON.stringify(buildExportConfig(state.settings), null, 2);
+        return JSON.stringify(buildExportConfig(current.settings), null, 2);
       },
       importSettings(value) {
         const imported = importSettingsFromJson(value, createDefaultSettings());
@@ -593,8 +864,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         );
       },
     }),
-    [state, updateSettings],
+    [runTownTunePreview, getCurrentState, refreshWeatherState, stopTownTunePreview, updateSettings],
   );
 
-  return <AppContext.Provider value={{ state, loading, actions }}>{children}</AppContext.Provider>;
+  const appStateContextValue = useMemo(() => ({ state, loading }), [state, loading]);
+
+  return (
+    <AppStateContext.Provider value={appStateContextValue}>
+      <AppActionsContext.Provider value={actions}>{children}</AppActionsContext.Provider>
+    </AppStateContext.Provider>
+  );
 }

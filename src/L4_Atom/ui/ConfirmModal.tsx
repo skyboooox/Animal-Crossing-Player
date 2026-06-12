@@ -21,7 +21,7 @@ export function ConfirmModal({ open, title, body, confirmLabel = 'Continue', dan
       typewriter={false}
       footer={
         <div className="modal-actions">
-          <Button htmlType="button" onClick={onCancel}>
+          <Button ghost htmlType="button" type="primary" onClick={onCancel}>
             Cancel
           </Button>
           <Button htmlType="button" type="primary" danger={danger} onClick={onConfirm}>

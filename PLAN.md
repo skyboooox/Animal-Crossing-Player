@@ -1,260 +1,415 @@
-# Animal-Crossing-Player 实施计划
+# Animal-Crossing-Player Plan
 
-## 文档定位
+## Purpose
 
-本文定义实现顺序和每阶段完成标准。产品边界看 [PROJECT.md](PROJECT.md)，架构看 [ARCHITECTURE.md](ARCHITECTURE.md)，测试矩阵看 [TEST_PLAN.md](TEST_PLAN.md)。
+This file is the active implementation and handoff plan. Product boundary is in `PROJECT.md`; architecture is in `ARCHITECTURE.md`; verification is in `TEST_PLAN.md`.
 
-## 总体策略
+`docs.old/` is archive input only and will be deleted after handoff.
 
-先建可运行 React + Vite 基线和四层目录，再接 L2 状态编排、L3 领域能力、L4 平台原子能力，最后完成 L1 页面和 MQTT 验证。每阶段必须能独立验证，不把所有风险压到最后。
+## Current Handoff State
 
-## 当前执行状态
-
-| 阶段 | 状态 | 验证 |
+| Area | State | Evidence |
 | --- | --- | --- |
-| 阶段 0：项目基线 | 已完成 | `npm run dev`、`npm run build`、`npm run test`、侧边浏览器 |
-| 阶段 1：状态模型与持久化 | 已完成 | 单元测试、导入导出、刷新持久化 |
-| 阶段 2：资源与音频引擎 | 已完成 | 单元测试、音频 manifest、浏览器启动流程 |
-| 阶段 3：岛歌 | 已完成 | 单元测试、导览和设置预览 |
-| 阶段 4：天气、时间和农历 | 已完成 | 单元测试、手动 / 自动回退流程 |
-| 阶段 5：导览与首页 | 已完成 | Playwright、侧边浏览器 |
-| 阶段 6：设置页 | 已完成 | Playwright、侧边浏览器 |
-| 阶段 7：MQTT 远程控制 | 已完成 | Docker Mosquitto、CLI WebSocket、Playwright MQTT |
-| 阶段 8：端到端验证与收口 | 已完成 | `npm run lint`、`npm run test`、`npm run build`、`npm run test:e2e`、`npm audit` |
+| Product scope | Rebuilt into active docs | `PROJECT.md` |
+| Architecture | Four-layer structure exists | `src/L1_Entry`, `src/L2_Core`, `src/L3_Business`, `src/L4_Atom` |
+| Contract routing | Rebuilt | `docs/contract-index.md` |
+| Evaluation plan | Rebuilt | `docs/eval-plan.md` |
+| Agent boundaries | Rebuilt | `docs/agent-boundaries.md` |
+| Tool inventory | Rebuilt | `docs/tool-inventory.md` |
+| Code verification | Pending after doc handoff | run commands in `TEST_PLAN.md` |
+| Performance refactor kickoff | Planned | `S-004..S-008`, `C-012..C-017` |
 
-## 阶段 0：项目基线
+## Sprint List
 
-状态：已完成。
+| Sprint | Goal | Contract | Status |
+| --- | --- | --- | --- |
+| `S-001` | Rebuild active handoff docs before `docs.old/` deletion | `C-001..C-011` | completed |
+| `S-002` | Re-verify current app baseline after handoff | `C-001..C-010` | completed |
+| `S-003` | Close release blockers: resource licensing, production weather and `wss://` policy | `C-011` | planned |
+| `S-004` | Capture performance baseline and lock effect parity gates | `C-012`, `C-013` | completed |
+| `S-005` | Optimize home background pan without visual regression | `C-013`, `C-014` | completed |
+| `S-006` | Split provider/controller code to reduce render blast radius | `C-013`, `C-015` | completed |
+| `S-007` | Reduce modal motion layout/paint cost while preserving morph/liquid effects | `C-013`, `C-016` | completed |
+| `S-008` | Remove dead code and consolidate helpers after measured hot paths are fixed | `C-017` | completed |
 
-目标：
+## Performance Refactor Intake
 
-- 建立 React + Vite 应用。
-- 建立 `src/L1_Entry`、`src/L2_Core`、`src/L3_Business`、`src/L4_Atom` 四层目录。
-- 接入 `animal-island-ui/style`。
-- 补齐基础脚本、TypeScript、测试框架。
-- 读取 `public/assets/audio.json`。
+### Goal
 
-范围：
+Reduce CPU and GPU usage without changing visible effects, audio behavior, settings behavior or remote-control behavior.
 
-- `package.json`。
-- Vite / TS 配置。
-- `src/L1_Entry`。
-- `src/L4_Atom/ui`。
-- `src/L4_Atom/assetManifest`。
-- 基础测试配置。
+### Non-Goals
 
-完成标准：
+- No product simplification disguised as optimization.
+- No removal of background pan, modal morph/liquid clip, onboarding/settings motion, audio fades, town tune preview or hourly bell flow.
+- No new production dependency unless profiling proves local changes are insufficient and the user approves.
+- No broad formatting-only rewrite mixed with performance changes.
 
-- `npm run dev` 可启动。
-- `npm run build` 通过。
-- `npm run test` 通过。
-- 页面能渲染一个 `animal-island-ui` 组件。
-- 能列出四个 BGM 版本。
+### Current Hotspot Hypotheses
 
-## 阶段 1：状态模型与持久化
+- `src/L1_Entry/pages/HomePage.tsx` writes `background-position` every animation frame for preset pan.
+- `src/L1_Entry/styles.css` declares `will-change: background-position` and uses layout-affecting modal morph properties.
+- `src/L1_Entry/providers.tsx` combines app state, audio, weather, MQTT, background upload and settings persistence in one provider.
+- `src/L4_Atom/ui/animalIsland.tsx` measures layout for modal morph and injects an animated SVG clip path while modals are mounted.
+- `test/e2e/app.spec.ts` currently asserts background motion through `background-position`, which locks the old implementation detail.
 
-状态：已完成。
+### Acceptance
 
-目标：
+- Baseline and post-change evidence compare the same scenarios.
+- Visual parity is judged by observable motion/effect state, not by preserving internal CSS property choices.
+- Audio and MQTT contracts stay unchanged.
+- Each implementation Sprint has one primary goal and focused owned files.
 
-- 实现 [STATE_MODEL.md](STATE_MODEL.md) 中的设置和运行态。
-- 实现默认设置。
-- 实现本地持久化。
-- 实现设置导出 / 导入基础。
+## Sprint Contract: S-004 Performance Baseline And Effect Gates
 
-范围：
+### Goal
 
-- `src/L2_Core/appState.ts`。
-- `src/L2_Core/settingsCore.ts`。
-- `src/L3_Business/settings`。
-- `src/L4_Atom/storage`。
+Create repeatable performance evidence and effect-parity gates before product code optimization.
 
-完成标准：
+### Contract Index
 
-- 刷新后设置保持。
-- 默认值与文档一致。
-- `saveCredentials=false` 时不持久化 MQTT 用户名密码。
-- 导出 / 导入 schema 校验可用。
+- `contract_id`: `C-012`, `C-013`
+- Source: `PROJECT.md#Acceptance Criteria`, `ARCHITECTURE.md#Performance Refactor Direction`, `TEST_PLAN.md#Performance Coverage`
+- Expected code/test locations: `test/e2e/app.spec.ts`, optional `test/e2e/performance.spec.ts`, optional `scripts/measure-performance.mjs`
+- Expected verification: targeted Playwright run plus `npm run test`, `npm run lint`, `npm run build`
 
-## 阶段 2：资源与音频引擎
+### In Scope
 
-状态：已完成。
+- Add or update browser performance smoke coverage for home idle pan, settings modal motion and onboarding transition.
+- Record metrics names and evidence paths in the test output or a small generated artifact ignored by Git if large.
+- Change E2E assertions that bind effects to implementation details, such as requiring `background-position` to change.
+- Keep tests deterministic enough for local comparison.
 
-目标：
+### Out Of Scope
 
-- 实现 [AUDIO_ENGINE.md](AUDIO_ENGINE.md)。
-- 接入 `audio.json`。
-- 实现 BGM 选择和天气回退。
-- 实现首批加载、播放、下一小时预加载。
+- Product performance fixes.
+- Visual redesign.
+- New production dependencies.
+- Changing audio, MQTT, weather or settings behavior.
 
-范围：
+### Done Definition
 
-- `src/L2_Core/audioCore.ts`。
-- `src/L3_Business/audio`。
-- `src/L4_Atom/assetManifest`。
-- `src/L4_Atom/storage/cacheStorageStore.ts`。
-- `src/L4_Atom/audio`。
+- A future implementer can run one documented command and get baseline evidence.
+- Tests prove effects are present without locking the exact implementation property.
+- Baseline captures enough data to decide whether S-005, S-006 or S-007 is the first optimization target.
 
-完成标准：
+### Required Verification
 
-- 四个版本可选择。
-- `Wild World` Rainy / Snowy 回退 Sunny。
-- 当前 BGM + bell 可加载。
-- 点击后可播放 BGM。
-- 下一小时可预加载。
+```sh
+npm run test
+npm run lint
+npm run build
+npm run test:e2e -- --project=chromium-desktop
+```
 
-## 阶段 3：岛歌
+### Pass Threshold
 
-状态：已完成。
+- Performance evidence is produced or the missing browser API is explicitly reported.
+- Existing user-visible flows covered by touched tests still pass.
+- No product code is changed in this Sprint except test-only instrumentation hooks if absolutely necessary.
 
-目标：
+### Failure Threshold
 
-- 实现 [TOWN_TUNE.md](TOWN_TUNE.md)。
-- 支持 NookNet `melody=` URL。
-- 实现 16 音符预览和 Web Audio 预览。
-- 接入整点流程。
+- Baseline cannot distinguish paint/render/main-thread cost.
+- Any test accepts a static fallback for an effect that should remain animated.
+- Evidence requires manual DevTools-only steps with no repeatable command.
 
-范围：
+### Known Risks
 
-- `src/L3_Business/townTune`。
-- `src/L2_Core/audioCore.ts`。
-- `src/L1_Entry/onboarding/TownTuneStep.tsx`。
-- `src/L1_Entry/settings/AudioSettingsPanel.tsx`。
+- Local hardware variance: compare relative deltas within the same machine/profile.
+- Browser trace size: keep large artifacts out of Git and record only paths or summaries.
+- Flaky animation timing: assert presence and bounded movement, not exact frame counts.
 
-完成标准：
+### Result
 
-- 有效 NookNet URL 可解析。
-- 非 NookNet URL 被拒绝。
-- 16 音符可预览。
-- 没有岛歌时整点只播放 bell。
+- Added `test/e2e/performance.spec.ts` with repeatable home pan, settings modal and onboarding/startup performance smoke coverage.
+- Updated `test/e2e/app.spec.ts` so background pan is asserted as observable motion/effect state, not as a required `background-position` implementation.
+- Fixed existing lint failure in `test/unit/i18nLocales.test.ts`.
 
-## 阶段 4：天气、时间和农历
+Verification:
 
-状态：已完成。
+```sh
+npm run test
+npm run lint
+npm run build
+npm run test:e2e -- --project=chromium-desktop test/e2e/performance.spec.ts
+```
 
-目标：
+All four passed.
 
-- 实现 [WEATHER_TIME.md](WEATHER_TIME.md)。
-- 接入 Geolocation + Open-Meteo。
-- 支持手动天气。
-- 支持 12h / 24h 和农历显示。
+Follow-up stabilization:
 
-范围：
+```sh
+npm run test:e2e -- --project=chromium-desktop test/e2e/app.spec.ts
+```
 
-- `src/L2_Core/weatherCore.ts`。
-- `src/L3_Business/weather`。
-- `src/L3_Business/time`。
-- `src/L4_Atom/weatherApi`。
-- `src/L4_Atom/date`。
+The earlier app E2E failures were fixed: onboarding footer placement, settings safe-scroll bottom padding and localized hourly-chime lookup now pass.
 
-完成标准：
+## Sprint Contract: S-005 Home Background Pan Optimization
 
-- 自动天气成功时更新首页和 BGM 选择。
-- 定位拒绝或 API 失败可回退。
-- 手动天气不请求 API。
-- 农历开关可用。
+### Goal
 
-## 阶段 5：导览与首页
+Replace the continuous preset pan hot path with an equivalent lower-paint implementation.
 
-状态：已完成。
+### Scope
 
-目标：
+- Owned files: `src/L1_Entry/pages/HomePage.tsx`, `src/L1_Entry/styles.css`, affected Playwright tests.
+- Preserve random pan angle, speed, preset repeat, setting toggle and `prefers-reduced-motion`.
+- Prefer transform/compositor motion over per-frame `background-position` writes.
 
-- 实现四页导览。
-- 实现首页极简展示。
-- 实现启动流程。
+### Verification
 
-范围：
+- Run S-004 baseline command before and after.
+- Pass home background E2E coverage on desktop and mobile.
+- Show improved paint/main-thread evidence or document an external bottleneck.
 
-- `src/L1_Entry/onboarding`。
-- `src/L1_Entry/pages/HomePage.tsx`。
-- `src/L2_Core/startupCore.ts`。
-- `src/L2_Core/onboardingCore.ts`。
+### Result
 
-完成标准：
+- Replaced per-frame `background-position` writes in `src/L1_Entry/pages/HomePage.tsx` with a repeated Web Animations API transform segment on an inner pan layer.
+- Kept preset repeat, random angle, speed, toggle behavior and `prefers-reduced-motion`.
+- Updated `src/L1_Entry/styles.css` so the pan layer uses `will-change: transform`; the outer background no longer advertises `will-change: background-position`.
+- Extended `test/e2e/performance.spec.ts` to record `styleMutationCount`, which directly catches paint-heavy style writes.
 
-- 首次进入显示导览。
-- `Skip` 使用默认配置并进入音频加载。
-- 加载完成前 `Start` disabled。
-- 首次导览完成后再次打开页面显示启动音频弹窗，先加载音频，加载完成后点击 `Start` 播放。
-- 首页只显示允许内容。
-- 浏览器阻止音频时出现授权浮层。
+Same-machine home pan before/after evidence:
 
-## 阶段 6：设置页
+| Metric | Before S-005 | After S-005 |
+| --- | ---: | ---: |
+| `styleMutationCount` | 197 | 0 |
+| `maxRunningAnimations` | 0 | 1 |
+| `observedTransformOrAnimation` | false | true |
+| `LayoutCount` | 200 | 19 |
+| `TaskDuration` | 0.063956 | 0.059667 |
 
-状态：已完成。
+Evidence artifacts:
 
-目标：
+- `/tmp/acp-s005-perf/before-home-idle-preset-pan-summary.json`
+- `/tmp/acp-s005-perf/after-home-idle-preset-pan-summary.json`
 
-- 实现二级设置菜单。
-- 覆盖 Audio / Island / Remote / App。
-- 实现背景上传和本地保存。
-- 实现清除、导入导出、明文密码确认。
+Verification:
 
-范围：
+```sh
+npm run test:e2e -- --project=chromium-desktop test/e2e/performance.spec.ts -g "home idle preset pan"
+```
 
-- `src/L1_Entry/settings`。
-- `src/L1_Entry/pages/SettingsPage.tsx`。
-- `src/L2_Core/settingsCore.ts`。
-- `src/L2_Core/backgroundCore.ts`。
-- `src/L3_Business/background`。
-- `src/L4_Atom/storage`。
+Passed before and after the S-005 patch. Broader S-004 verification had already passed `npm run test`, `npm run lint`, `npm run build` and full `test/e2e/performance.spec.ts`.
 
-完成标准：
+## Sprint Contract: S-006 Provider And Controller Split
 
-- 所有设置可读写并持久化。
-- 上传背景刷新后仍可显示。
-- 清除音频缓存不清除背景和设置。
-- 导出包含 MQTT 密码时二次确认。
+### Goal
 
-## 阶段 7：MQTT 远程控制
+Reduce unnecessary React render blast radius while preserving L2 workflow ownership.
 
-状态：已完成。
+### Scope
 
-目标：
+- Owned files: `src/L1_Entry/providers.tsx`, `src/L1_Entry/appContext.ts`, new L1 provider/controller files if needed, affected tests.
+- Extract audio, weather, MQTT and background side effects behind smaller hooks/controllers.
+- Keep public `AppActions` behavior stable unless the contract index is updated first.
 
-- 实现 [MQTT_PROTOCOL.md](MQTT_PROTOCOL.md)。
-- 接入 MQTT.js。
-- 使用本地 Docker Mosquitto 验证 WebSocket。
+### Verification
 
-范围：
+- Render-counter evidence shows unrelated settings edits do not re-render HomePage.
+- Unit, lint, build and affected E2E tests pass.
 
-- `src/L1_Entry/adapters/mqttCommandEntry.ts`。
-- `src/L1_Entry/settings/RemoteSettingsPanel.tsx`。
-- `src/L2_Core/remoteControlCore.ts`。
-- `src/L3_Business/settings/sanitizeSensitiveConfig.ts`。
-- `src/L4_Atom/mqtt`。
+### Result
 
-完成标准：
+- Split app context into separate state and action contexts in `src/L1_Entry/appContext.ts` and `src/L1_Entry/providers.tsx`.
+- Kept `AppActions` stable by reading current state through a provider ref, while fixing the ref update timing so startup audio preparation reads current state.
+- Narrowed `HomePage` props and memoized it so settings-panel edits do not fan out into home renders.
+- Preserved S-005 preset pan behavior and added test-only render diagnostics in `src/L1_Entry/renderDiagnostics.ts`.
+- Added fast audio probing and render delta attachment to `test/e2e/performance.spec.ts`.
 
-- 可连接 `ws://localhost:9001`。
-- `setVolume` 生效并返回 ACK。
-- `requestState` 发布完整 state 且无密码。
-- 断线和错误在 Settings 显示。
+Render evidence:
 
-## 阶段 8：端到端验证与收口
+| Metric | S-006 Result |
+| --- | ---: |
+| `HomePage` render delta while changing audio slider | 0 |
 
-状态：已完成。
+Evidence artifact:
 
-目标：
+- `test-results/performance-provider-rende-78c21-ot-amplify-HomePage-renders-chromium-desktop/provider-render-summary.json`
 
-- 执行 [TEST_PLAN.md](TEST_PLAN.md)。
-- 修复移动端和桌面端 UI 问题。
-- 确认文档与实现一致。
+Verification:
 
-完成标准：
+```sh
+npm run lint
+npm run test
+npm run build
+npm run test:e2e -- --project=chromium-desktop test/e2e/performance.spec.ts
+git diff --check -- src/L1_Entry/App.tsx src/L1_Entry/appContext.ts src/L1_Entry/providers.tsx src/L1_Entry/pages/HomePage.tsx src/L1_Entry/styles.css src/L1_Entry/renderDiagnostics.ts test/e2e/performance.spec.ts test/e2e/app.spec.ts test/unit/i18nLocales.test.ts PLAN.md docs/contract-index.md docs/eval-plan.md
+```
 
-- `npm run test` 通过。
-- `npm run build` 通过。
-- 主要 Playwright 用例通过。
-- MQTT WebSocket 用例通过。
-- 文档无过期字段、路径和命令。
+All passed. Build still reports the existing Vite large chunk warning.
 
-## 非阻塞开放项
+## Sprint Contract: S-007 Modal Motion Cost Reduction
 
-这些项不阻塞本地 100% 实现，但会影响发布：
+### Goal
 
-- 最终部署方式。
-- 资源授权范围。
-- Open-Meteo 发布用量和署名策略。
-- 生产 MQTT Broker 地址和 `wss://` 证书。
+Keep modal morph/liquid visual effects while reducing layout, paint and persistent animation overhead.
+
+### Scope
+
+- Owned files: `src/L4_Atom/ui/animalIsland.tsx`, `src/L1_Entry/styles.css`, affected Playwright tests.
+- Replace layout-affecting morph animation properties with transform/scale where visually equivalent.
+- Keep liquid clip only while it is visible and allowed by motion preference.
+
+### Verification
+
+- Modal morph/liquid E2E assertions still prove the effects exist.
+- Performance evidence improves modal open/category/close captures or documents the remaining third-party cost.
+
+### Result
+
+- Replaced modal morph wrapper animation from layout-driving `left/top/width/height` keyframes with `transform: translate3d(...) scale(...)`.
+- Changed morph overlay `will-change` from layout properties to `transform, opacity`.
+- Preserved pill/blob opacity handoff, organic mask, liquid SVG clip and reduced-motion behavior.
+- Updated E2E morph assertions to verify transform/scale variables while keeping visible morph/liquid checks.
+
+Same-machine settings modal before/after evidence:
+
+| Metric | Before S-007 | After S-007 |
+| --- | ---: | ---: |
+| `LayoutCount` | 131 | 124 |
+| `RecalcStyleCount` | 346 | 345 |
+| `RecalcStyleDuration` | 0.017239 | 0.015263 |
+| `ScriptDuration` | 0.032779 | 0.031206 |
+| `TaskDuration` | 0.159634 | 0.143839 |
+| `ThreadTime` | 0.166750 | 0.151516 |
+| `motionChanged` | true | true |
+| `observedTransformOrAnimation` | true | true |
+
+Evidence artifacts:
+
+- `/tmp/acp-s007-perf/before-settings-modal-open-switch-close-summary.json`
+- `/tmp/acp-s007-perf/after-settings-modal-open-switch-close-summary.json`
+
+Verification:
+
+```sh
+npm run lint
+npm run build
+npm run test:e2e -- --project=chromium-desktop test/e2e/app.spec.ts -g "audio volume sliders update active Web Audio gains immediately"
+npm run test:e2e -- --project=chromium-desktop test/e2e/performance.spec.ts
+```
+
+All passed. Build still reports the existing Vite large chunk warning. One attempted parallel `npm run build` plus Playwright build failed with `ENOTEMPTY` while both processes cleaned `dist/assets`; rerunning sequentially passed.
+
+## Sprint Contract: S-008 Cleanup After Measured Fixes
+
+### Goal
+
+Consolidate functions, split oversized files and remove unused code only after hot-path behavior is protected.
+
+### Scope
+
+- Owned files are chosen from S-004 evidence and prior implementation diffs.
+- Remove dead helpers, duplicate branches and obsolete tests created by old implementations.
+- Keep architecture layer rules intact.
+
+### Verification
+
+- `npm run test`, `npm run lint`, `npm run build`, affected E2E.
+- `test/unit/architecture.test.ts` still enforces layer boundaries.
+
+### Result
+
+- Removed obsolete modal `shapeMotionKey` plumbing after transform-based morph parity was covered.
+- Removed unused settings `onViewChange` state/effect path.
+- Narrowed uploaded-background helper input to the required `background` field.
+- Verified with `npm run lint`, `npm run test`, `npm run build`, targeted app E2E, full performance E2E and `git diff --check`.
+
+## Sprint Contract: S-001 Active Handoff Docs
+
+### Goal
+
+Create active, non-archive documentation sufficient for another agent to continue after `docs.old/` is deleted.
+
+### Contract Index
+
+- `contract_id`: `C-001..C-011`
+- Source: `PROJECT.md`, `ARCHITECTURE.md`, `TEST_PLAN.md`
+- Expected docs: `README.md`, `PROJECT.md`, `ARCHITECTURE.md`, `PLAN.md`, `TEST_PLAN.md`, `docs/contract-index.md`, `docs/eval-plan.md`, `docs/agent-boundaries.md`, `docs/tool-inventory.md`
+- Expected verification: `git diff --check`; optional full app checks in `S-002`
+
+### In Scope
+
+- Replace template README with project entry.
+- Rebuild product, architecture, plan, test and contract docs.
+- Preserve constraints needed after archive deletion.
+
+### Out Of Scope
+
+- Product code edits.
+- Rewriting `docs.old/`.
+- Running full E2E or MQTT broker validation unless requested after handoff.
+- Final release decisions on licensing, production deployment or weather API policy.
+
+### Done Definition
+
+- Active docs do not require `docs.old/`.
+- Main contracts map to current code paths and validation commands.
+- Remaining work is explicit and implementable as `S-002`.
+
+### Required Verification
+
+```sh
+git diff --check README.md PROJECT.md ARCHITECTURE.md PLAN.md TEST_PLAN.md docs/contract-index.md docs/eval-plan.md docs/agent-boundaries.md docs/tool-inventory.md
+```
+
+### Pass Threshold
+
+- No whitespace errors.
+- No active doc links require `docs.old/`.
+- `S-002` has clear verification commands.
+
+### Failure Threshold
+
+- Any active doc depends on `docs.old/` as a required source.
+- Product-code changes are introduced by this Sprint.
+- Contract IDs cannot be traced to code or verification entry points.
+
+### Rollback
+
+- Revert only files touched by `S-001`.
+
+## Sprint Contract: S-002 Re-Verify Baseline
+
+### Goal
+
+Prove the current app still satisfies the active contracts after the handoff.
+
+### In Scope
+
+- `npm run test`
+- `npm run lint`
+- `npm run build`
+- `npm run test:e2e`
+- Optional local MQTT broker smoke when Docker is available.
+
+### Out Of Scope
+
+- Fixing discovered product bugs in the same Sprint unless user authorizes an implementation Sprint.
+
+### Done Definition
+
+- Verification results are recorded.
+- Failures are reduced to minimal repro, expected result, actual result and owning contract.
+
+### Result
+
+Baseline re-verification passed after app E2E stabilization:
+
+```sh
+npm run lint
+npm run test
+npm run test:e2e -- --project=chromium-desktop
+git diff --check
+```
+
+Result: lint passed, 8 unit files / 34 tests passed, desktop E2E passed with 10 passed and 1 skipped MQTT broker smoke, and diff check passed. Build still reports the existing Vite large chunk warning.
+
+## Open Questions
+
+- Confirm final resource licensing and distribution scope.
+- Confirm production deployment target and `wss://` broker strategy.
+- Confirm Open-Meteo production usage and attribution requirements.
+- Confirm target performance profile: desktop only, mobile-class Chrome throttle, or both.

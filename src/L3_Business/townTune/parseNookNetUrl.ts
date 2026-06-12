@@ -2,21 +2,21 @@ import type { TownTuneNote, TownTuneSettings } from '../../L4_Atom/types';
 import { err, ok, type Result } from '../../L4_Atom/utils/result';
 
 const FREQUENCIES: Record<string, number> = {
+  g: 196.0,
   a: 220.0,
   b: 246.94,
   c: 261.63,
   d: 293.66,
   e: 329.63,
   f: 349.23,
-  g: 392.0,
+  G: 392.0,
   A: 440.0,
   B: 493.88,
   C: 523.25,
   D: 587.33,
   E: 659.25,
-  F: 698.46,
-  G: 783.99,
 };
+const RANDOM_POOL = Object.values(FREQUENCIES);
 
 export const TOWN_TUNE_ERRORS = {
   unsupportedUrl: 'Only NookNet tune URLs are supported.',
@@ -31,7 +31,10 @@ function mapToken(token: string, previousFrequency: number | null): TownTuneNote
     return { token, kind: 'rest', frequency: null };
   }
   if (token === 's') {
-    return { token, kind: previousFrequency === null ? 'rest' : 'sustain', frequency: previousFrequency };
+    return { token, kind: 'sustain', frequency: previousFrequency };
+  }
+  if (token === 'R') {
+    return { token, kind: 'note', frequency: RANDOM_POOL[Math.floor(Math.random() * RANDOM_POOL.length)] };
   }
   return { token, kind: 'note', frequency: FREQUENCIES[token] };
 }
@@ -62,7 +65,7 @@ export function parseNookNetUrl(value: string): Result<TownTuneSettings> {
   const notes: TownTuneNote[] = [];
 
   for (const token of tokens) {
-    if (token !== 's' && token !== 'z' && !(token in FREQUENCIES)) {
+    if (token !== 's' && token !== 'z' && token !== 'R' && !(token in FREQUENCIES)) {
       return err(TOWN_TUNE_ERRORS.unsupportedToken);
     }
 

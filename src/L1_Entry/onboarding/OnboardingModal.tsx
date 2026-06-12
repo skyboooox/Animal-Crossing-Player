@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { type MouseEvent, useState } from 'react';
 import type { AppState } from '../../L2_Core/types';
+import { AnimatedPanel } from '../../L4_Atom/ui/AnimatedPanel';
 import type { AppActions } from '../providers';
 import { AppIcon } from '../../L4_Atom/ui/AppIcon';
 import { Button, Modal } from '../../L4_Atom/ui/animalIsland';
-import { getLanguageOptions, type UiText } from '../i18n';
+import { formatErrorMessage, getLanguageOptions, type UiText } from '../i18n';
 import { LanguageStep } from './LanguageStep';
 import { BgmVersionStep } from './BgmVersionStep';
 import { TownTuneStep } from './TownTuneStep';
@@ -13,7 +14,7 @@ interface OnboardingModalProps {
   state: AppState;
   text: UiText;
   actions: AppActions;
-  onOpenSettings: () => void;
+  onOpenSettings: (element: HTMLElement) => void;
 }
 
 export function OnboardingModal({ state, text, actions, onOpenSettings }: OnboardingModalProps) {
@@ -69,33 +70,38 @@ export function OnboardingModal({ state, text, actions, onOpenSettings }: Onboar
   };
 
   const canGoBack = step !== 'language';
-  const primaryLabel = step === 'audioLoading' ? text.common.start : text.common.next;
+  const primaryLabel = step === 'audioLoading' ? text.common.start : text.common.continue;
   const primaryDisabled = step === 'audioLoading' && !audioReady;
 
   return (
     <>
       <div className="onboarding-page-actions" role="toolbar" aria-label={onboardingText.pageActionsAria}>
-        <Button icon={<AppIcon name="skip" size={16} />} onClick={actions.skipOnboarding}>
+        <Button ghost type="primary" onClick={actions.skipOnboarding}>
           {text.common.skip}
         </Button>
-        <Button aria-label={text.common.settings} icon={<AppIcon name="settings" size={16} />} onClick={onOpenSettings}>
+        <Button
+          aria-label={text.common.settings}
+          icon={<AppIcon name="settings" size={16} />}
+          type="primary"
+          onClick={(event: MouseEvent<HTMLElement>) => onOpenSettings(event.currentTarget)}
+        >
           {text.common.settings}
         </Button>
       </div>
       <Modal
         open={!state.settings.onboardingCompleted}
         className="app-modal app-modal--onboarding"
-        title={onboardingText.title}
-        width="min(720px, calc(100vw - 24px))"
+        width="min(820px, calc(100vw - 24px))"
         maskClosable={false}
         typewriter={false}
         footer={
           <div className="onboarding-footer">
-            <div>{canGoBack ? <Button icon={<AppIcon name="back" size={16} />} onClick={goBack}>{text.common.back}</Button> : null}</div>
+            <div>{canGoBack ? <Button className="onboarding-nav-button onboarding-nav-button--back" ghost type="primary" onClick={goBack}>{text.common.back}</Button> : null}</div>
             <Button
-              icon={step === 'audioLoading' ? <AppIcon name="volume" size={16} /> : <AppIcon name="next" size={16} />}
-              type="primary"
+              className="onboarding-nav-button onboarding-nav-button--continue"
               disabled={primaryDisabled}
+              loading={step === 'audioLoading' && state.runtime.audio.status === 'loading'}
+              type="primary"
               onClick={goNext}
             >
               {primaryLabel}
@@ -103,39 +109,43 @@ export function OnboardingModal({ state, text, actions, onOpenSettings }: Onboar
           </div>
         }
       >
-        {step === 'language' ? (
-          <LanguageStep value={state.settings.language} onChange={actions.setLanguage} labels={onboardingText.language} options={getLanguageOptions()} />
-        ) : null}
-        {step === 'bgm' ? (
-          <BgmVersionStep
-            value={state.settings.bgmVersion}
-            onChange={actions.setBgmVersion}
-            title={onboardingText.bgm.title}
-            choicesAria={onboardingText.bgm.choicesAria}
-          />
-        ) : null}
-        {step === 'townTune' ? (
-          <TownTuneStep
-            value={state.settings.townTune}
-            url={townTuneUrl}
-            error={townTuneError}
-            labels={{ ...onboardingText.townTune, notesAria: text.common.townTuneNotes, preview: text.common.preview, clear: text.common.clear }}
-            onUrlChange={(url) => {
-              setTownTuneUrl(url);
-              setTownTuneError(null);
-            }}
-            onPreview={actions.previewTownTune}
-            onClear={actions.clearTownTune}
-            onSkip={skipTownTune}
-          />
-        ) : null}
-        {step === 'audioLoading' ? (
-          <AudioLoadingStep
-            audio={state.runtime.audio}
-            onPrepare={actions.prepareAudio}
-            labels={onboardingText.audio}
-          />
-        ) : null}
+        <AnimatedPanel animationKey={`onboarding-${step}`} className="onboarding-motion-panel">
+          {step === 'language' ? (
+            <LanguageStep value={state.settings.language} onChange={actions.setLanguage} labels={onboardingText.language} options={getLanguageOptions()} />
+          ) : null}
+          {step === 'bgm' ? (
+            <BgmVersionStep
+              value={state.settings.bgmVersion}
+              onChange={actions.setBgmVersion}
+              title={onboardingText.bgm.title}
+              choicesAria={onboardingText.bgm.choicesAria}
+            />
+          ) : null}
+          {step === 'townTune' ? (
+            <TownTuneStep
+              value={state.settings.townTune}
+              url={townTuneUrl}
+              error={townTuneError ? formatErrorMessage(text, townTuneError) : null}
+              labels={{ ...onboardingText.townTune, notesAria: text.common.townTuneNotes, preview: text.common.preview, stop: text.common.stop, clear: text.common.clear }}
+              previewPlaying={state.runtime.audio.townTunePreviewStatus === 'playing'}
+              onUrlChange={(url) => {
+                setTownTuneUrl(url);
+                setTownTuneError(null);
+              }}
+              onPreview={actions.previewTownTune}
+              onClear={actions.clearTownTune}
+              onSkip={skipTownTune}
+            />
+          ) : null}
+          {step === 'audioLoading' ? (
+            <AudioLoadingStep
+              audio={state.runtime.audio}
+              onPrepare={actions.prepareAudio}
+              labels={onboardingText.audio}
+              formatErrorMessage={(message) => formatErrorMessage(text, message)}
+            />
+          ) : null}
+        </AnimatedPanel>
       </Modal>
     </>
   );

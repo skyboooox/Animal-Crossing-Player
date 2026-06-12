@@ -14,7 +14,6 @@ export type IslandWeather = (typeof WEATHER_VALUES)[number];
 export type WeatherMode = 'auto' | 'manual';
 export type HourCycle = '24h' | '12h';
 export type BackgroundKind = 'solid' | 'preset' | 'uploaded';
-export type MotionMode = 'full' | 'reduced';
 export type MqttStatus = 'off' | 'connecting' | 'connected' | 'reconnecting' | 'error';
 
 export interface AudioSettings {
@@ -67,6 +66,7 @@ export interface BackgroundSettings {
   presetId: string | null;
   uploadedImageId: string | null;
   readabilityOverlay: boolean;
+  presetPanEnabled: boolean;
 }
 
 export interface UploadedBackground {
@@ -76,10 +76,6 @@ export interface UploadedBackground {
   size: number;
   createdAt: string;
   blob: Blob;
-}
-
-export interface DisplaySettings {
-  motion: MotionMode;
 }
 
 export interface MqttSettings {
@@ -106,7 +102,6 @@ export interface AppSettings {
   time: TimeSettings;
   background: BackgroundSettings;
   mqtt: MqttSettings;
-  display: DisplaySettings;
 }
 
 export interface RuntimeState {
@@ -121,6 +116,7 @@ export interface RuntimeState {
 
 export interface AudioRuntimeState {
   status: 'idle' | 'loading' | 'ready' | 'playing' | 'paused' | 'transitioning' | 'blocked' | 'error';
+  townTunePreviewStatus: 'idle' | 'playing';
   currentTrack: AudioTrackRef | null;
   nextTrack: AudioTrackRef | null;
   loadProgress: LoadProgress | null;
